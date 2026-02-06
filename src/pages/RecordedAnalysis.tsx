@@ -436,22 +436,55 @@ export default function RecordedAnalysis() {
               {selectedJob?.video_name}
             </DialogDescription>
           </DialogHeader>
-          {selectedJob?.result_json && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-success">
-                      {(selectedJob.result_json as JobResult).totalIn}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Total IN</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-destructive">
-                      {(selectedJob.result_json as JobResult).totalOut}
-                    </p>
+          {selectedJob?.result_json && (() => {
+            const result = selectedJob.result_json as unknown as JobResult;
+            return (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-3xl font-bold text-success">
+                        {result.totalIn}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Total IN</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-3xl font-bold text-destructive">
+                        {result.totalOut}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Total OUT</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-3xl font-bold text-primary">
+                        {result.peakOccupancy}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Peak Occupancy</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-3xl font-bold">
+                        {Math.floor(result.avgDwellSeconds / 60)}m {result.avgDwellSeconds % 60}s
+                      </p>
+                      <p className="text-sm text-muted-foreground">Avg Dwell Time</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  <span>
+                    Confidence: {(result.confidence * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
                     <p className="text-sm text-muted-foreground">Total OUT</p>
                   </CardContent>
                 </Card>
