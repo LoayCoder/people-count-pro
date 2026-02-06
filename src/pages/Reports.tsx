@@ -23,7 +23,7 @@ import {
   TrendingUp,
   Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format, subDays } from "date-fns";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { OccupancyChart } from "@/components/dashboard/OccupancyChart";
@@ -40,8 +40,11 @@ export default function Reports() {
   const [cameraId, setCameraId] = useState<string>("all");
   const [date, setDate] = useState<Date>(new Date());
 
-  const { sites } = useSites();
-  const { cameras } = useCameras();
+  const sitesQuery = useSites();
+  const camerasQuery = useCameras();
+
+  const sites = sitesQuery.data;
+  const cameras = camerasQuery.data;
 
   // Calculate date range based on report type
   const dateRange = getDateRangeForType(reportType);
@@ -56,12 +59,19 @@ export default function Reports() {
   const { data: reportData, isLoading } = useReportStats(filters);
   const exportReport = useExportReport();
 
+  // Transform daily data to chart format
+  const chartData = useMemo(() => {
+    if (!reportData?.dailyData) return [];
+    return reportData.dailyData.map((item) => ({
+      hour: format(new Date(item.date), "MMM dd"),
+      in: item.totalIn,
+      out: item.totalOut,
+      occupancy: item.peakOccupancy,
+    }));
+  }, [reportData?.dailyData]);
+
   const handleExportCSV = () => {
     exportReport.mutate({ filters, format: "csv" });
-  };
-
-  const handleExportJSON = () => {
-    exportReport.mutate({ filters, format: "json" });
   };
 
   const formatDwellTime = (seconds?: number) => {
@@ -204,7 +214,7 @@ export default function Reports() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <OccupancyChart data={reportData.dailyData} />
+                  <OccupancyChart data={chartData} />
                 </CardContent>
               </Card>
 
@@ -217,7 +227,7 @@ export default function Reports() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <InOutChart data={reportData.dailyData} />
+                  <InOutChart data={chartData} />
                 </CardContent>
               </Card>
             </div>
