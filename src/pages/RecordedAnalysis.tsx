@@ -351,7 +351,9 @@ export default function RecordedAnalysis() {
         <CameraConfigSetup 
           cameras={cameras || []} 
           selectedCamera={selectedCamera} 
-          onCameraChange={setSelectedCamera} 
+          onCameraChange={setSelectedCamera}
+          configMode={configMode}
+          onConfigModeChange={setConfigMode}
         />
 
         {/* Processing Jobs */}
