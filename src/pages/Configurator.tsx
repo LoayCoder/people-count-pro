@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Camera,
   Square,
   ArrowRightLeft,
@@ -21,13 +28,13 @@ import {
   Save,
   Undo,
   Redo,
-  ZoomIn,
-  ZoomOut,
   Move,
   Settings,
   Eye,
   Trash2,
   Loader2,
+  HelpCircle,
+  Info,
 } from "lucide-react";
 import { useCameras } from "@/hooks/use-cameras";
 import { useCameraConfig, useSaveCameraConfig } from "@/hooks/use-camera-config";
@@ -202,85 +209,132 @@ export default function Configurator() {
             <div className="lg:col-span-3">
               <Card className="overflow-hidden">
                 {/* Toolbar */}
-                <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant={selectedTool === "select" ? "secondary" : "ghost"}
-                      size="icon"
-                      onClick={() => setSelectedTool("select")}
-                      title="Select & Move"
-                    >
-                      <Move className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={selectedTool === "roi" ? "secondary" : "ghost"}
-                      size="icon"
-                      onClick={() => setSelectedTool("roi")}
-                      title="Draw ROI Polygon (double-click to close)"
-                    >
-                      <Shapes className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={selectedTool === "line" ? "secondary" : "ghost"}
-                      size="icon"
-                      onClick={() => setSelectedTool("line")}
-                      title="Draw Counting Line (click start, then end)"
-                    >
-                      <ArrowRightLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={selectedTool === "zone" ? "secondary" : "ghost"}
-                      size="icon"
-                      onClick={() => setSelectedTool("zone")}
-                      title="Draw Zone Polygon (double-click to close)"
-                    >
-                      <Square className="h-4 w-4" />
-                    </Button>
-                    <div className="mx-2 h-6 w-px bg-border" />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Undo"
-                      onClick={handleUndo}
-                      disabled={historyIndex <= 0}
-                    >
-                      <Undo className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Redo"
-                      onClick={handleRedo}
-                      disabled={historyIndex >= history.length - 1}
-                    >
-                      <Redo className="h-4 w-4" />
-                    </Button>
-                    <div className="mx-2 h-6 w-px bg-border" />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      title="Delete Selected"
-                      onClick={handleDeleteSelected}
-                      disabled={!selectedElementId}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                <TooltipProvider delayDuration={300}>
+                  <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2">
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={selectedTool === "select" ? "secondary" : "ghost"}
+                            size="icon"
+                            onClick={() => setSelectedTool("select")}
+                          >
+                            <Move className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p className="font-medium">Select & Move</p>
+                          <p className="text-xs text-muted-foreground">Click to select, drag to move elements</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={selectedTool === "roi" ? "secondary" : "ghost"}
+                            size="icon"
+                            onClick={() => setSelectedTool("roi")}
+                          >
+                            <Shapes className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p className="font-medium">Draw ROI Polygon</p>
+                          <p className="text-xs text-muted-foreground">Click to add points, double-click to close the polygon</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={selectedTool === "line" ? "secondary" : "ghost"}
+                            size="icon"
+                            onClick={() => setSelectedTool("line")}
+                          >
+                            <ArrowRightLeft className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p className="font-medium">Draw Counting Line</p>
+                          <p className="text-xs text-muted-foreground">Click start point, then end point. Arrow shows IN direction.</p>
+                          <p className="mt-1 text-xs text-primary">Used for counting people crossing in each direction</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={selectedTool === "zone" ? "secondary" : "ghost"}
+                            size="icon"
+                            onClick={() => setSelectedTool("zone")}
+                          >
+                            <Square className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p className="font-medium">Draw Zone Polygon</p>
+                          <p className="text-xs text-muted-foreground">Click to add points, double-click to close. Used for dwell tracking.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <div className="mx-2 h-6 w-px bg-border" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Undo"
+                        onClick={handleUndo}
+                        disabled={historyIndex <= 0}
+                      >
+                        <Undo className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Redo"
+                        onClick={handleRedo}
+                        disabled={historyIndex >= history.length - 1}
+                      >
+                        <Redo className="h-4 w-4" />
+                      </Button>
+                      <div className="mx-2 h-6 w-px bg-border" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Delete Selected"
+                        onClick={handleDeleteSelected}
+                        disabled={!selectedElementId}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-sm">
+                          <p className="font-medium mb-2">Quick Guide</p>
+                          <ul className="text-xs space-y-1 text-muted-foreground">
+                            <li>• <strong>Counting Line:</strong> Click 2 points to draw. Arrow shows IN direction.</li>
+                            <li>• <strong>ROI/Zone:</strong> Click multiple points, double-click to close.</li>
+                            <li>• <strong>Select:</strong> Click elements to select, then use Delete to remove.</li>
+                            <li>• <strong>Save:</strong> Click "Save Config" to persist your changes.</li>
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        <Eye className="mr-1 h-3 w-3" />
+                        {selectedTool === "select" ? "Select Mode" : selectedTool === "roi" ? "Drawing ROI" : selectedTool === "line" ? "Drawing Line" : "Drawing Zone"}
+                      </Badge>
+                      <Button size="sm" onClick={handleSave} disabled={saveConfig.isPending}>
+                        {saveConfig.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="mr-2 h-4 w-4" />
+                        )}
+                        Save Config
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      <Eye className="mr-1 h-3 w-3" />
-                      {selectedTool === "select" ? "Select Mode" : selectedTool === "roi" ? "Drawing ROI" : selectedTool === "line" ? "Drawing Line" : "Drawing Zone"}
-                    </Badge>
-                    <Button size="sm" onClick={handleSave} disabled={saveConfig.isPending}>
-                      {saveConfig.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                      )}
-                      Save Config
-                    </Button>
-                  </div>
-                </div>
+                </TooltipProvider>
 
                 {/* Canvas */}
                 <div className="relative aspect-video bg-black">
@@ -339,6 +393,18 @@ export default function Configurator() {
                     </span>
                   )}
                 </div>
+
+                {/* Help Alert for new users */}
+                {lines.length === 0 && !config && (
+                  <Alert className="mx-4 my-2">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      <strong>Getting Started:</strong> To enable people counting, select the{" "}
+                      <ArrowRightLeft className="inline h-3 w-3 mx-0.5" /> Line tool and click two points to draw a counting line.
+                      The arrow direction indicates the "IN" direction.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </Card>
             </div>
 

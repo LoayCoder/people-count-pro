@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -29,7 +30,6 @@ import {
 import {
   Upload,
   FileVideo,
-  Play,
   CheckCircle,
   Clock,
   XCircle,
@@ -38,6 +38,9 @@ import {
   Eye,
   Trash2,
   RefreshCw,
+  AlertTriangle,
+  Info,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,9 +54,11 @@ import {
   JobResult,
 } from "@/hooks/use-recorded-jobs";
 import { useCameras } from "@/hooks/use-cameras";
+import { useCameraConfig } from "@/hooks/use-camera-config";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
 
 const statusConfig = {
   pending: { icon: Clock, className: "text-muted-foreground", label: "Pending" },
@@ -263,39 +268,11 @@ export default function RecordedAnalysis() {
         </Card>
 
         {/* Quick Setup */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">Quick Analysis Setup</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Apply Camera Config
-                </label>
-                <Select value={selectedCamera || "none"} onValueChange={(v) => setSelectedCamera(v === "none" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select camera (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No config</SelectItem>
-                    {cameras?.map((camera) => (
-                      <SelectItem key={camera.id} value={camera.id}>
-                        {camera.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2 flex items-end gap-2">
-                <p className="text-sm text-muted-foreground">
-                  Select a camera configuration to apply ROI and counting line settings to
-                  uploaded videos. This helps ensure consistent analysis.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <CameraConfigSetup 
+          cameras={cameras || []} 
+          selectedCamera={selectedCamera} 
+          onCameraChange={setSelectedCamera} 
+        />
 
         {/* Processing Jobs */}
         <Card>
@@ -437,9 +414,17 @@ export default function RecordedAnalysis() {
             </DialogDescription>
           </DialogHeader>
           {selectedJob?.result_json && (() => {
-            const result = selectedJob.result_json as unknown as JobResult;
+            const result = selectedJob.result_json as unknown as JobResult & { isDemo?: boolean; lineCount?: number };
             return (
               <div className="grid gap-4 py-4">
+                {result.isDemo && (
+                  <Alert variant="default" className="border-warning/50 bg-warning/10">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <AlertDescription className="text-sm">
+                      <strong>Demo Mode:</strong> These are simulated results. For accurate counting, integrate a Computer Vision backend.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <Card>
                     <CardContent className="p-4 text-center">
@@ -481,6 +466,13 @@ export default function RecordedAnalysis() {
                   <span>
                     Confidence: {(result.confidence * 100).toFixed(0)}%
                   </span>
+                  {result.lineCount !== undefined && result.lineCount > 0 && (
+                    <>
+                      <span className="mx-2">•</span>
+                      <ArrowRightLeft className="h-4 w-4" />
+                      <span>{result.lineCount} counting line{result.lineCount !== 1 ? 's' : ''} applied</span>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -488,5 +480,94 @@ export default function RecordedAnalysis() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Extracted component for camera config setup with warning display
+function CameraConfigSetup({ 
+  cameras, 
+  selectedCamera, 
+  onCameraChange 
+}: { 
+  cameras: any[]; 
+  selectedCamera: string; 
+  onCameraChange: (v: string) => void;
+}) {
+  const { data: config } = useCameraConfig(selectedCamera || null);
+  const lineCount = config?.line_json?.length || 0;
+  const hasNoLines = selectedCamera && config && lineCount === 0;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-base">Quick Analysis Setup</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              Apply Camera Config
+            </label>
+            <Select value={selectedCamera || "none"} onValueChange={(v) => onCameraChange(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select camera (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No config</SelectItem>
+                {cameras?.map((camera) => (
+                  <SelectItem key={camera.id} value={camera.id}>
+                    {camera.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2 flex items-end gap-2">
+            {selectedCamera && config ? (
+              <div className="flex items-center gap-4 text-sm">
+                <Badge variant={lineCount > 0 ? "default" : "secondary"}>
+                  <ArrowRightLeft className="mr-1 h-3 w-3" />
+                  {lineCount} counting line{lineCount !== 1 ? 's' : ''}
+                </Badge>
+                <span className="text-muted-foreground">
+                  Config v{config.version}
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Select a camera configuration to apply counting line settings to uploaded videos.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Warning: No camera selected */}
+        {!selectedCamera && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <strong>Tip:</strong> Select a camera with configured counting lines for more consistent analysis results.{" "}
+              <Link to="/configurator" className="text-primary hover:underline">
+                Go to Configurator →
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Warning: Camera selected but no counting lines */}
+        {hasNoLines && (
+          <Alert variant="default" className="border-warning/50 bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-sm">
+              <strong>No counting lines configured.</strong> This camera has no counting lines defined. 
+              Results will be estimates only.{" "}
+              <Link to="/configurator" className="text-primary hover:underline">
+                Add counting lines →
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   );
 }
