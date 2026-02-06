@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Json } from "@/integrations/supabase/types";
 
 export interface SystemSettings {
-  demo_mode?: boolean;
   auto_refresh?: boolean;
   dark_mode?: boolean;
   occupancy_alerts?: boolean;
@@ -25,7 +24,6 @@ export interface SystemSettings {
 }
 
 const defaultSettings: SystemSettings = {
-  demo_mode: false,
   auto_refresh: true,
   dark_mode: true,
   occupancy_alerts: true,

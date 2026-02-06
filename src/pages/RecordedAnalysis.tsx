@@ -203,12 +203,12 @@ export default function RecordedAnalysis() {
             description: "Draw counting lines on the video frame.",
           });
         } else {
-          // No config selected - process with defaults
+          // No config selected - process with AI estimation
           await createAndProcessJob(file.name, fileUrl, null, null);
           setUploadProgress(100);
           toast({
             title: "Upload complete",
-            description: "Video analysis started (demo mode - no lines configured).",
+            description: "Video analysis started (AI estimation - no counting lines configured).",
           });
         }
       } catch (error: any) {
@@ -504,7 +504,6 @@ export default function RecordedAnalysis() {
           
           {selectedJob?.result_json && (() => {
             const result = selectedJob.result_json as unknown as JobResult & { 
-              isDemo?: boolean; 
               lineCount?: number;
               frameAnalysis?: boolean;
             };
@@ -639,7 +638,7 @@ export default function RecordedAnalysis() {
                     <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded-lg">
                       <div className="flex justify-between">
                         <span>Analysis Type:</span>
-                        <span className="font-medium">{result.isDemo ? "Demo Mode" : "AI Vision"}</span>
+                        <span className="font-medium">AI Vision Analysis</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Lines Configured:</span>
@@ -750,7 +749,7 @@ function CameraConfigSetup({
                     <SelectValue placeholder="Select camera (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No config (demo mode)</SelectItem>
+                    <SelectItem value="none">No configuration</SelectItem>
                     {cameras?.map((camera) => (
                       <SelectItem key={camera.id} value={camera.id}>
                         {camera.name}
@@ -783,7 +782,7 @@ function CameraConfigSetup({
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>No config selected.</strong> Videos will be processed in demo mode with estimated results.{" "}
+                  <strong>No config selected.</strong> Videos will be processed with AI estimation (no counting lines).{" "}
                   <Link to="/configurator" className="text-primary hover:underline">
                     Create a camera config →
                   </Link>

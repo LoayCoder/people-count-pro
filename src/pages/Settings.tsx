@@ -42,7 +42,6 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
-  const [demoMode, setDemoMode] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [occupancyAlerts, setOccupancyAlerts] = useState(true);
   const [spikeAlerts, setSpikeAlerts] = useState(true);
@@ -63,7 +62,6 @@ export default function Settings() {
   // Load settings
   useEffect(() => {
     if (settings && !isLoading) {
-      setDemoMode(settings.demo_mode ?? false);
       setAutoRefresh(settings.auto_refresh ?? true);
       setOccupancyAlerts(settings.occupancy_alerts ?? true);
       setSpikeAlerts(settings.spike_alerts ?? true);
@@ -137,7 +135,6 @@ export default function Settings() {
 
   const handleSaveSystemPrefs = () => {
     updateMultipleSettings.mutate({
-      demo_mode: demoMode,
       auto_refresh: autoRefresh,
     });
   };
@@ -244,16 +241,6 @@ export default function Settings() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Demo Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Use sample video data for testing
-                      </p>
-                    </div>
-                    <Switch checked={demoMode} onCheckedChange={setDemoMode} />
-                  </div>
-                  <Separator />
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Auto-refresh Dashboard</Label>
