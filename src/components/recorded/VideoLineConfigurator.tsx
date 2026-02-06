@@ -60,35 +60,64 @@ export function VideoLineConfigurator({
     }
   }, [open, existingLines]);
 
-  // Extract thumbnail from video
+  // Extract thumbnail from video - optimized for speed
   useEffect(() => {
     if (open && videoUrl) {
+      setThumbnailUrl(null);
+      
       const video = document.createElement("video");
-      video.crossOrigin = "anonymous";
       video.muted = true;
-      video.preload = "metadata";
+      video.playsInline = true;
+      video.preload = "auto";
       
-      video.onloadeddata = () => {
-        video.currentTime = 1; // Seek to 1 second
-      };
+      // Try without crossOrigin first for faster loading
+      // Only add crossOrigin if we get a security error
+      let triedWithCors = false;
       
-      video.onseeked = () => {
+      const extractFrame = () => {
         try {
           const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
+          // Use standard 16:9 aspect ratio if dimensions not available
+          canvas.width = video.videoWidth || 1920;
+          canvas.height = video.videoHeight || 1080;
           const ctx = canvas.getContext("2d");
           if (ctx) {
-            ctx.drawImage(video, 0, 0);
-            setThumbnailUrl(canvas.toDataURL("image/jpeg"));
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+            setThumbnailUrl(dataUrl);
           }
         } catch (e) {
+          // Security error - try with crossOrigin
+          if (!triedWithCors && e instanceof DOMException && e.name === "SecurityError") {
+            triedWithCors = true;
+            video.crossOrigin = "anonymous";
+            video.load();
+            return;
+          }
           console.error("Failed to extract thumbnail:", e);
+          // Use video URL directly as fallback (video element will show it)
+          setThumbnailUrl(videoUrl);
+        }
+      };
+      
+      video.onloadedmetadata = () => {
+        // Seek to 0.5 seconds for faster frame extraction
+        video.currentTime = Math.min(0.5, video.duration || 0.5);
+      };
+      
+      video.onseeked = extractFrame;
+      
+      // Fallback: if seeking doesn't work, try on canplay
+      video.oncanplay = () => {
+        if (!thumbnailUrl) {
+          extractFrame();
         }
       };
       
       video.onerror = () => {
         console.error("Failed to load video for thumbnail");
+        // Use video URL directly as fallback
+        setThumbnailUrl(videoUrl);
       };
       
       video.src = videoUrl;
@@ -96,7 +125,8 @@ export function VideoLineConfigurator({
       
       return () => {
         video.pause();
-        video.src = "";
+        video.removeAttribute("src");
+        video.load();
       };
     }
   }, [open, videoUrl]);
