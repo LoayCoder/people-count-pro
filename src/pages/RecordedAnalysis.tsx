@@ -490,17 +490,3 @@ export default function RecordedAnalysis() {
     </div>
   );
 }
-              </div>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle className="h-4 w-4 text-success" />
-                <span>
-                  Confidence: {((selectedJob.result_json as JobResult).confidence * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
