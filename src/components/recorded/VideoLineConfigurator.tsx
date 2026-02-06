@@ -145,6 +145,16 @@ export function VideoLineConfigurator({
     }
   }, [selectedId, lines]);
 
+  const handleFlipDirection = useCallback(() => {
+    if (selectedId) {
+      setLines(lines.map(l => 
+        l.id === selectedId 
+          ? { ...l, inDirection: l.inDirection === "right" ? "left" : "right" }
+          : l
+      ));
+    }
+  }, [selectedId, lines]);
+
   const handleSave = useCallback(() => {
     onSave(lines);
   }, [lines, onSave]);
