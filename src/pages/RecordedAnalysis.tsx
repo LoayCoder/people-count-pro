@@ -749,7 +749,7 @@ function CameraConfigSetup({
                     <SelectValue placeholder="Select camera (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No config (demo mode)</SelectItem>
+                    <SelectItem value="none">No configuration</SelectItem>
                     {cameras?.map((camera) => (
                       <SelectItem key={camera.id} value={camera.id}>
                         {camera.name}
