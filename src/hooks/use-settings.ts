@@ -24,7 +24,6 @@ export interface SystemSettings {
 }
 
 const defaultSettings: SystemSettings = {
-  demo_mode: false,
   auto_refresh: true,
   dark_mode: true,
   occupancy_alerts: true,

@@ -243,16 +243,6 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Demo Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Use sample video data for testing
-                      </p>
-                    </div>
-                    <Switch checked={demoMode} onCheckedChange={setDemoMode} />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
                       <Label>Auto-refresh Dashboard</Label>
                       <p className="text-sm text-muted-foreground">
                         Refresh live data every 10 seconds
