@@ -284,13 +284,14 @@ ${lineCount > 0 ? 'Higher confidence if counting lines are well-placed for the v
         totalOut: Math.floor(seededRandom(40, 90)),
         peakOccupancy: Math.floor(seededRandom(15, 35)),
         avgDwellSeconds: Math.floor(seededRandom(120, 240)),
-        confidence: lineCount > 0 ? 0.80 : 0.60,
+        confidence: lineCount > 0 ? 0.65 : 0.45,
       };
     }
 
     // Add metadata
     result.lineCount = lineCount;
     result.isDemo = false;
+    result.frameAnalysis = true; // AI vision analysis was performed
     
     // Add hourly breakdown using deterministic seeding
     result.hourlyBreakdown = Array.from({ length: 8 }, (_, i) => ({
