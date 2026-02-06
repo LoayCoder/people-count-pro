@@ -1,56 +1,12 @@
 import { AlertTriangle, Bell, Camera, Server, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAlerts } from "@/hooks/use-alerts";
 
-interface Alert {
-  id: string;
-  type: "occupancy_threshold" | "spike_detected" | "camera_offline" | "worker_failure";
-  severity: "low" | "medium" | "high" | "critical";
-  message: string;
-  camera?: string;
-  timestamp: string;
-  status: "new" | "acknowledged" | "closed";
+interface AlertsListProps {
+  limit?: number;
 }
-
-const mockAlerts: Alert[] = [
-  {
-    id: "1",
-    type: "occupancy_threshold",
-    severity: "high",
-    message: "Occupancy exceeded 90% threshold at Main Entrance",
-    camera: "Main Entrance",
-    timestamp: "2 min ago",
-    status: "new",
-  },
-  {
-    id: "2",
-    type: "spike_detected",
-    severity: "medium",
-    message: "Sudden increase of 25 people detected at Lobby",
-    camera: "Lobby Camera 1",
-    timestamp: "8 min ago",
-    status: "new",
-  },
-  {
-    id: "3",
-    type: "camera_offline",
-    severity: "critical",
-    message: "Connection lost to Parking Entrance camera",
-    camera: "Parking Entrance",
-    timestamp: "15 min ago",
-    status: "acknowledged",
-  },
-  {
-    id: "4",
-    type: "worker_failure",
-    severity: "high",
-    message: "AI worker process terminated unexpectedly",
-    timestamp: "1 hour ago",
-    status: "closed",
-  },
-];
 
 const alertIcons = {
   occupancy_threshold: Bell,
@@ -66,12 +22,35 @@ const severityStyles = {
   critical: "bg-destructive text-destructive-foreground alert-pulse",
 };
 
-export function AlertsList() {
+export function AlertsList({ limit = 10 }: AlertsListProps) {
+  const { data: alerts, isLoading } = useAlerts();
+
+  const displayAlerts = alerts?.slice(0, limit) || [];
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[200px] items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading alerts...</p>
+      </div>
+    );
+  }
+
+  if (displayAlerts.length === 0) {
+    return (
+      <div className="flex h-[200px] items-center justify-center">
+        <div className="text-center">
+          <Bell className="mx-auto h-8 w-8 text-muted-foreground/30" />
+          <p className="mt-2 text-sm text-muted-foreground">No alerts</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ScrollArea className="h-[400px]">
       <div className="space-y-3 pr-4">
-        {mockAlerts.map((alert) => {
-          const Icon = alertIcons[alert.type];
+        {displayAlerts.map((alert) => {
+          const Icon = alertIcons[alert.type] || Bell;
           
           return (
             <div
@@ -118,11 +97,11 @@ export function AlertsList() {
                 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{alert.timestamp}</span>
-                  {alert.camera && (
+                  <span>{new Date(alert.created_at).toLocaleString()}</span>
+                  {alert.cameras?.name && (
                     <>
                       <span>•</span>
-                      <span>{alert.camera}</span>
+                      <span>{alert.cameras.name}</span>
                     </>
                   )}
                 </div>
