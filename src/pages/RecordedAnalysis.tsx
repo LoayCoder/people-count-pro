@@ -203,12 +203,12 @@ export default function RecordedAnalysis() {
             description: "Draw counting lines on the video frame.",
           });
         } else {
-          // No config selected - process with defaults
+          // No config selected - process with AI estimation
           await createAndProcessJob(file.name, fileUrl, null, null);
           setUploadProgress(100);
           toast({
             title: "Upload complete",
-            description: "Video analysis started (demo mode - no lines configured).",
+            description: "Video analysis started (AI estimation - no counting lines configured).",
           });
         }
       } catch (error: any) {
