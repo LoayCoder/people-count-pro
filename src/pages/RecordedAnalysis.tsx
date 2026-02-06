@@ -561,6 +561,19 @@ export default function RecordedAnalysis() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Video Line Configurator Dialog */}
+      <VideoLineConfigurator
+        open={configDialogOpen}
+        onOpenChange={(open) => {
+          setConfigDialogOpen(open);
+          if (!open) setPendingUpload(null);
+        }}
+        videoName={pendingUpload?.fileName || ""}
+        videoUrl={pendingUpload?.fileUrl}
+        existingLines={[]}
+        onSave={handleVideoConfigSave}
+      />
     </div>
   );
 }
