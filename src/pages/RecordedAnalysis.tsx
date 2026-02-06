@@ -504,7 +504,6 @@ export default function RecordedAnalysis() {
           
           {selectedJob?.result_json && (() => {
             const result = selectedJob.result_json as unknown as JobResult & { 
-              isDemo?: boolean; 
               lineCount?: number;
               frameAnalysis?: boolean;
             };
