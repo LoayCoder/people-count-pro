@@ -118,12 +118,23 @@ export function VideoPlayer({
   };
 
   // Calculate line positions relative to displayed video size
+  // Lines are stored as pixel coordinates, we need to normalize them to percentages (0-100)
   const getScaledPosition = (point: { x: number; y: number }) => {
-    // Lines are stored as normalized coordinates (0-1 or as pixels)
-    // Assuming they're stored as percentages (0-1)
+    // If video dimensions are available, normalize pixel coords to percentage
+    if (videoDimensions.width > 0 && videoDimensions.height > 0) {
+      return {
+        x: (point.x / videoDimensions.width) * 100,
+        y: (point.y / videoDimensions.height) * 100,
+      };
+    }
+    // Fallback: assume coordinates are already percentages if < 1, otherwise estimate based on common resolutions
+    if (point.x <= 1 && point.y <= 1) {
+      return { x: point.x * 100, y: point.y * 100 };
+    }
+    // Fallback for when video hasn't loaded yet - estimate based on 1920x1080
     return {
-      x: point.x * 100,
-      y: point.y * 100,
+      x: (point.x / 1920) * 100,
+      y: (point.y / 1080) * 100,
     };
   };
 
