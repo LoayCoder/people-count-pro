@@ -95,40 +95,50 @@ serve(async (req) => {
       `Line ${idx + 1} "${line.name}": from (${line.start.x.toFixed(2)}, ${line.start.y.toFixed(2)}) to (${line.end.x.toFixed(2)}, ${line.end.y.toFixed(2)}), IN direction: ${line.direction}`
     ).join("\n");
 
-    // Prepare the AI prompt for video analysis
-    const systemPrompt = `You are an AI video analysis system specialized in people counting. 
-Analyze the described video and provide accurate counting metrics.
+    // Prepare the AI prompt for video analysis with vision capabilities
+    const systemPrompt = `You are an expert AI video analyst specialized in people counting and occupancy monitoring.
 
-You must return structured data using the provided function.
+Your task is to analyze surveillance video content and provide accurate counting metrics.
 
-Consider:
-- Unique person tracking (no double counting)
-- Entry/exit direction based on counting line definitions
-- Peak occupancy moments
-- Average dwell time estimation
+CRITICAL ANALYSIS GUIDELINES:
+1. Count UNIQUE individuals - never double-count the same person
+2. Track entry/exit movements across the configured counting lines
+3. Determine direction based on the line definitions provided
+4. Estimate peak simultaneous occupancy
+5. Estimate average time people spend in view (dwell time)
 
 ${lineCount > 0 ? `
-IMPORTANT: The following counting lines are configured for this camera:
+COUNTING LINES CONFIGURED:
 ${lineDescriptions}
 
-Use these line definitions to determine IN vs OUT direction for people crossing.` : 
-`NOTE: No counting lines are configured. Provide general estimates based on video content.`}`;
+Use these exact line positions to determine IN vs OUT direction. A person crossing from one side to the other counts as either IN or OUT based on the direction specified.` : 
+`NOTE: No counting lines configured. Provide general occupancy estimates based on visible movement patterns.`}
 
-    const userPrompt = `Analyze a video file named "${job.video_name}" for people counting.
-${job.camera ? `This video is from camera "${(job.camera as any).name}".` : ""}
+You MUST use the provided function to report your analysis results.`;
+
+    const userPrompt = `Analyze this video file for people counting: "${job.video_name}"
+${job.camera ? `Camera: "${(job.camera as any).name}"` : ""}
 
 ${lineCount > 0 ? `
-This camera has ${lineCount} counting line(s) configured. Count people crossing each line and determine direction based on the line definitions provided.
+This video has ${lineCount} counting line(s) configured. 
+- Count people crossing each line
+- Determine direction based on the defined IN direction
+- Track unique individuals (no double counting)
 ` : `
-No counting lines are configured for this camera. Provide reasonable estimates for a typical surveillance video.
+No counting lines are configured. Provide reasonable occupancy estimates based on:
+- Visible people in the scene
+- Entry/exit patterns observed
+- Peak crowding moments
 `}
 
-Based on the video analysis, report:
-1. Total number of unique people entering (IN count)
-2. Total number of people exiting (OUT count)  
+Provide your analysis with:
+1. Total unique people entering (IN count)
+2. Total people exiting (OUT count)
 3. Peak occupancy at any moment
-4. Average time people spent in view (dwell time in seconds)
-5. Your confidence level (0-1) based on ${lineCount > 0 ? 'having counting lines defined' : 'no specific counting lines'}`;
+4. Average dwell time in seconds
+5. Your confidence level (0.0 to 1.0) - be honest about uncertainty
+
+${lineCount > 0 ? 'Higher confidence if counting lines are well-placed for the video content.' : 'Lower confidence expected without specific counting lines.'}`;
 
     // Update progress
     await supabase
