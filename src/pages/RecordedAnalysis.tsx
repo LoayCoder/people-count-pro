@@ -193,7 +193,7 @@ export default function RecordedAnalysis() {
     return (
       <div className="min-h-screen">
         <Header title="Recorded Video Analysis" subtitle="Process and analyze recorded video files" />
-        <PageLoader text="Loading jobs..." />
+        <LoadingSpinner />
       </div>
     );
   }
