@@ -393,6 +393,18 @@ export default function Configurator() {
                     </span>
                   )}
                 </div>
+
+                {/* Help Alert for new users */}
+                {lines.length === 0 && !config && (
+                  <Alert className="mx-4 my-2">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      <strong>Getting Started:</strong> To enable people counting, select the{" "}
+                      <ArrowRightLeft className="inline h-3 w-3 mx-0.5" /> Line tool and click two points to draw a counting line.
+                      The arrow direction indicates the "IN" direction.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </Card>
             </div>
 

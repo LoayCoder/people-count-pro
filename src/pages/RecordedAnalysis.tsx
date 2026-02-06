@@ -482,3 +482,92 @@ export default function RecordedAnalysis() {
     </div>
   );
 }
+
+// Extracted component for camera config setup with warning display
+function CameraConfigSetup({ 
+  cameras, 
+  selectedCamera, 
+  onCameraChange 
+}: { 
+  cameras: any[]; 
+  selectedCamera: string; 
+  onCameraChange: (v: string) => void;
+}) {
+  const { data: config } = useCameraConfig(selectedCamera || null);
+  const lineCount = config?.line_json?.length || 0;
+  const hasNoLines = selectedCamera && config && lineCount === 0;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-base">Quick Analysis Setup</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              Apply Camera Config
+            </label>
+            <Select value={selectedCamera || "none"} onValueChange={(v) => onCameraChange(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select camera (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No config</SelectItem>
+                {cameras?.map((camera) => (
+                  <SelectItem key={camera.id} value={camera.id}>
+                    {camera.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-2 flex items-end gap-2">
+            {selectedCamera && config ? (
+              <div className="flex items-center gap-4 text-sm">
+                <Badge variant={lineCount > 0 ? "default" : "secondary"}>
+                  <ArrowRightLeft className="mr-1 h-3 w-3" />
+                  {lineCount} counting line{lineCount !== 1 ? 's' : ''}
+                </Badge>
+                <span className="text-muted-foreground">
+                  Config v{config.version}
+                </span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Select a camera configuration to apply counting line settings to uploaded videos.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Warning: No camera selected */}
+        {!selectedCamera && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <strong>Tip:</strong> Select a camera with configured counting lines for more consistent analysis results.{" "}
+              <Link to="/configurator" className="text-primary hover:underline">
+                Go to Configurator →
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Warning: Camera selected but no counting lines */}
+        {hasNoLines && (
+          <Alert variant="default" className="border-warning/50 bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-sm">
+              <strong>No counting lines configured.</strong> This camera has no counting lines defined. 
+              Results will be estimates only.{" "}
+              <Link to="/configurator" className="text-primary hover:underline">
+                Add counting lines →
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
