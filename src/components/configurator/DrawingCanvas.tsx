@@ -242,6 +242,7 @@ export function DrawingCanvas({
       ref={svgRef}
       viewBox={`0 0 ${width} ${height}`}
       className="absolute inset-0 h-full w-full cursor-crosshair"
+      style={{ touchAction: "none" }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onMouseMove={handleMouseMove}
