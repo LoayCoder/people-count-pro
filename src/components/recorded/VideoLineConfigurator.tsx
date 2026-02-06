@@ -204,33 +204,50 @@ export function VideoLineConfigurator({
           </TooltipProvider>
 
           {/* Canvas Area */}
-          <div className="flex-1 min-h-0 relative rounded-lg overflow-hidden bg-black">
+          <div className="flex-1 min-h-0 relative rounded-lg overflow-hidden bg-black flex items-center justify-center">
             {thumbnailUrl ? (
-              <img
-                src={thumbnailUrl}
-                alt="Video frame"
-                className="absolute inset-0 h-full w-full object-contain"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                  <p className="text-sm">Loading video frame...</p>
+              <>
+                {thumbnailUrl.startsWith("data:") ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt="Video frame"
+                    className="max-h-full max-w-full object-contain"
+                    style={{ pointerEvents: "none" }}
+                  />
+                ) : (
+                  <video
+                    src={thumbnailUrl}
+                    className="max-h-full max-w-full object-contain"
+                    style={{ pointerEvents: "none" }}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    onLoadedMetadata={(e) => {
+                      const video = e.currentTarget;
+                      video.currentTime = 0.5;
+                    }}
+                  />
+                )}
+                <div className="absolute inset-0">
+                  <DrawingCanvas
+                    tool={selectedTool}
+                    rois={[]}
+                    lines={lines}
+                    zones={[]}
+                    onRoisChange={() => {}}
+                    onLinesChange={setLines}
+                    onZonesChange={() => {}}
+                    selectedId={selectedId || undefined}
+                    onSelectElement={handleSelectElement}
+                  />
                 </div>
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                <p className="text-sm">Loading video frame...</p>
               </div>
             )}
-            
-            <DrawingCanvas
-              tool={selectedTool}
-              rois={[]}
-              lines={lines}
-              zones={[]}
-              onRoisChange={() => {}}
-              onLinesChange={setLines}
-              onZonesChange={() => {}}
-              selectedId={selectedId || undefined}
-              onSelectElement={handleSelectElement}
-            />
           </div>
 
           {/* Help text */}
