@@ -8,7 +8,7 @@ type Alert = Tables<"alerts">;
 type AlertUpdate = TablesUpdate<"alerts">;
 type AlertStatus = "new" | "acknowledged" | "closed";
 
-export function useAlerts(options?: { status?: string; limit?: number }) {
+export function useAlerts(options?: { status?: AlertStatus; limit?: number }) {
   return useQuery({
     queryKey: ["alerts", options],
     queryFn: async () => {
