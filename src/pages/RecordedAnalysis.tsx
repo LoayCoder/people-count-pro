@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -42,6 +42,8 @@ import {
   Info,
   ArrowRightLeft,
   Pencil,
+  BrainCircuit,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +61,7 @@ import { useCameraConfig } from "@/hooks/use-camera-config";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
 import { VideoLineConfigurator } from "@/components/recorded/VideoLineConfigurator";
+import { VideoPlayer } from "@/components/recorded/VideoPlayer";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import type { CountingLine } from "@/components/configurator/DrawingCanvas";
@@ -486,75 +489,185 @@ export default function RecordedAnalysis() {
         </Card>
       </div>
 
-      {/* Results Dialog */}
+      {/* Results Dialog - Enhanced with Video Preview */}
       <Dialog open={resultsDialogOpen} onOpenChange={setResultsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Analysis Results</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <FileVideo className="h-5 w-5" />
+              Analysis Results
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2">
               {selectedJob?.video_name}
             </DialogDescription>
           </DialogHeader>
+          
           {selectedJob?.result_json && (() => {
-            const result = selectedJob.result_json as unknown as JobResult & { isDemo?: boolean; lineCount?: number };
+            const result = selectedJob.result_json as unknown as JobResult & { 
+              isDemo?: boolean; 
+              lineCount?: number;
+              frameAnalysis?: boolean;
+            };
+            const lineConfig = selectedJob.line_config_json as CountingLine[] | null;
+            const confidenceLevel = result.confidence >= 0.8 ? "high" : result.confidence >= 0.6 ? "medium" : "low";
+            const confidenceColor = confidenceLevel === "high" ? "text-success" : confidenceLevel === "medium" ? "text-warning" : "text-destructive";
+            
             return (
-              <div className="grid gap-4 py-4">
-                {result.isDemo && (
-                  <Alert variant="default" className="border-warning/50 bg-warning/10">
-                    <AlertTriangle className="h-4 w-4 text-warning" />
-                    <AlertDescription className="text-sm">
-                      <strong>Demo Mode:</strong> These are simulated results. For accurate counting, integrate a Computer Vision backend.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-3xl font-bold text-success">
-                        {result.totalIn}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total IN</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-3xl font-bold text-destructive">
-                        {result.totalOut}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total OUT</p>
-                    </CardContent>
-                  </Card>
+              <div className="space-y-6">
+                {/* AI Estimation Warning Banner */}
+                <Alert className="border-primary/50 bg-primary/5">
+                  <BrainCircuit className="h-4 w-4" />
+                  <AlertTitle className="text-sm font-medium">AI Estimation Mode</AlertTitle>
+                  <AlertDescription className="text-xs mt-1">
+                    {result.frameAnalysis 
+                      ? "Results based on AI vision analysis of video frames. For 100% accuracy, integrate a Computer Vision backend (YOLO + DeepSORT)."
+                      : "Results are AI estimates based on video metadata. For accurate counting, enable frame analysis or integrate a CV backend."
+                    }
+                  </AlertDescription>
+                </Alert>
+
+                {/* Main Content Grid: Video + Stats side by side */}
+                <div className="grid lg:grid-cols-2 gap-6">
+                  {/* Video Player Section */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Video Preview
+                    </h4>
+                    {selectedJob.video_url ? (
+                      <VideoPlayer
+                        videoUrl={selectedJob.video_url}
+                        countingLines={lineConfig || []}
+                        showOverlay={!!lineConfig && lineConfig.length > 0}
+                        className="w-full"
+                      />
+                    ) : (
+                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+                        <div className="text-center text-muted-foreground">
+                          <FileVideo className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">Video not available</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Line Configuration Info */}
+                    {lineConfig && lineConfig.length > 0 && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs font-medium mb-2">Counting Lines Applied:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {lineConfig.map((line, idx) => (
+                            <Badge key={line.id || idx} variant="outline" className="text-xs">
+                              <ArrowRightLeft className="h-3 w-3 mr-1" />
+                              {line.name} ({line.inDirection === "left" ? "←" : "→"} = IN)
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Statistics Section */}
+                  <div className="space-y-4">
+                    {/* Confidence Indicator */}
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Gauge className={cn("h-5 w-5", confidenceColor)} />
+                        <span className="text-sm font-medium">Confidence Level</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-lg font-bold", confidenceColor)}>
+                          {(result.confidence * 100).toFixed(0)}%
+                        </span>
+                        <Badge variant={confidenceLevel === "high" ? "default" : confidenceLevel === "medium" ? "secondary" : "destructive"}>
+                          {confidenceLevel.toUpperCase()}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card className="border-success/30 bg-success/5">
+                        <CardContent className="p-4 text-center">
+                          <p className="text-3xl font-bold text-success">
+                            {result.totalIn}
+                          </p>
+                          <p className="text-sm text-muted-foreground">Total IN</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-destructive/30 bg-destructive/5">
+                        <CardContent className="p-4 text-center">
+                          <p className="text-3xl font-bold text-destructive">
+                            {result.totalOut}
+                          </p>
+                          <p className="text-sm text-muted-foreground">Total OUT</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-3xl font-bold text-primary">
+                            {result.peakOccupancy}
+                          </p>
+                          <p className="text-sm text-muted-foreground">Peak Occupancy</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="p-4 text-center">
+                          <p className="text-3xl font-bold">
+                            {Math.floor(result.avgDwellSeconds / 60)}m {result.avgDwellSeconds % 60}s
+                          </p>
+                          <p className="text-sm text-muted-foreground">Avg Dwell Time</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Net Occupancy */}
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Net Change</span>
+                          <span className={cn(
+                            "text-2xl font-bold",
+                            result.totalIn - result.totalOut >= 0 ? "text-success" : "text-destructive"
+                          )}>
+                            {result.totalIn - result.totalOut >= 0 ? "+" : ""}{result.totalIn - result.totalOut}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Analysis Metadata */}
+                    <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded-lg">
+                      <div className="flex justify-between">
+                        <span>Analysis Type:</span>
+                        <span className="font-medium">{result.isDemo ? "Demo Mode" : "AI Vision"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Lines Configured:</span>
+                        <span className="font-medium">{result.lineCount || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Completed:</span>
+                        <span className="font-medium">
+                          {selectedJob.completed_at 
+                            ? formatDistanceToNow(new Date(selectedJob.completed_at), { addSuffix: true })
+                            : "—"
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-3xl font-bold text-primary">
-                        {result.peakOccupancy}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Peak Occupancy</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-3xl font-bold">
-                        {Math.floor(result.avgDwellSeconds / 60)}m {result.avgDwellSeconds % 60}s
-                      </p>
-                      <p className="text-sm text-muted-foreground">Avg Dwell Time</p>
-                    </CardContent>
-                  </Card>
-                </div>
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle className="h-4 w-4 text-success" />
-                  <span>
-                    Confidence: {(result.confidence * 100).toFixed(0)}%
-                  </span>
-                  {result.lineCount !== undefined && result.lineCount > 0 && (
-                    <>
-                      <span className="mx-2">•</span>
-                      <ArrowRightLeft className="h-4 w-4" />
-                      <span>{result.lineCount} counting line{result.lineCount !== 1 ? 's' : ''} applied</span>
-                    </>
-                  )}
+
+                {/* Footer Actions */}
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <div className="text-xs text-muted-foreground">
+                    <Info className="h-3 w-3 inline mr-1" />
+                    For production accuracy, integrate YOLO + DeepSORT CV pipeline
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Report
+                  </Button>
                 </div>
               </div>
             );
