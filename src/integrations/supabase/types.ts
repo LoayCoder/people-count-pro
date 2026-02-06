@@ -122,6 +122,42 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       camera_configs: {
         Row: {
           camera_id: string
@@ -229,6 +265,114 @@ export type Database = {
           },
         ]
       }
+      counting_events: {
+        Row: {
+          camera_id: string
+          confidence: number | null
+          created_at: string
+          direction: string
+          event_date: string
+          id: string
+          line_id: string | null
+          timestamp: string
+          track_id: string
+          zone_id: string | null
+        }
+        Insert: {
+          camera_id: string
+          confidence?: number | null
+          created_at?: string
+          direction: string
+          event_date?: string
+          id?: string
+          line_id?: string | null
+          timestamp?: string
+          track_id: string
+          zone_id?: string | null
+        }
+        Update: {
+          camera_id?: string
+          confidence?: number | null
+          created_at?: string
+          direction?: string
+          event_date?: string
+          id?: string
+          line_id?: string | null
+          timestamp?: string
+          track_id?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "counting_events_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "counting_events_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_stats: {
+        Row: {
+          avg_dwell_seconds: number | null
+          camera_id: string | null
+          created_at: string
+          date: string
+          id: string
+          peak_occupancy: number
+          peak_time: string | null
+          site_id: string | null
+          total_in: number
+          total_out: number
+        }
+        Insert: {
+          avg_dwell_seconds?: number | null
+          camera_id?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          peak_occupancy?: number
+          peak_time?: string | null
+          site_id?: string | null
+          total_in?: number
+          total_out?: number
+        }
+        Update: {
+          avg_dwell_seconds?: number | null
+          camera_id?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          peak_occupancy?: number
+          peak_time?: string | null
+          site_id?: string | null
+          total_in?: number
+          total_out?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_stats_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_stats_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dwell_stats: {
         Row: {
           camera_id: string
@@ -267,6 +411,67 @@ export type Database = {
           },
           {
             foreignKeyName: "dwell_stats_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hourly_stats: {
+        Row: {
+          avg_dwell_seconds: number | null
+          camera_id: string | null
+          created_at: string
+          hour_start: string
+          id: string
+          peak_occupancy: number
+          site_id: string | null
+          total_in: number
+          total_out: number
+          zone_id: string | null
+        }
+        Insert: {
+          avg_dwell_seconds?: number | null
+          camera_id?: string | null
+          created_at?: string
+          hour_start: string
+          id?: string
+          peak_occupancy?: number
+          site_id?: string | null
+          total_in?: number
+          total_out?: number
+          zone_id?: string | null
+        }
+        Update: {
+          avg_dwell_seconds?: number | null
+          camera_id?: string | null
+          created_at?: string
+          hour_start?: string
+          id?: string
+          peak_occupancy?: number
+          site_id?: string | null
+          total_in?: number
+          total_out?: number
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hourly_stats_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hourly_stats_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hourly_stats_zone_id_fkey"
             columns: ["zone_id"]
             isOneToOne: false
             referencedRelation: "zones"
@@ -407,6 +612,30 @@ export type Database = {
           id?: string
           name?: string
           timezone?: string | null
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
