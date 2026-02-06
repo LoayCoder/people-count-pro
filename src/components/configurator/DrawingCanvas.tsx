@@ -96,8 +96,9 @@ export function DrawingCanvas({
       if (!currentLine) {
         setCurrentLine({ start: pos });
       } else if (!currentLine.end) {
+        const newLineId = generateId();
         const newLine: CountingLine = {
-          id: generateId(),
+          id: newLineId,
           start: currentLine.start,
           end: pos,
           name: `Line ${lines.length + 1}`,
@@ -105,6 +106,8 @@ export function DrawingCanvas({
         };
         onLinesChange([...lines, newLine]);
         setCurrentLine(null);
+        // Auto-select the newly created line
+        onSelectElement(newLineId, "line");
       }
     } else if (tool === "select") {
       onSelectElement(null, null);
