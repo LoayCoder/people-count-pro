@@ -485,28 +485,11 @@ export default function RecordedAnalysis() {
               </div>
             );
           })()}
-                    <p className="text-sm text-muted-foreground">Total OUT</p>
-                  </CardContent>
-                </Card>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-primary">
-                      {(selectedJob.result_json as JobResult).peakOccupancy}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Peak Occupancy</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold">
-                      {Math.floor((selectedJob.result_json as JobResult).avgDwellSeconds / 60)}m{" "}
-                      {(selectedJob.result_json as JobResult).avgDwellSeconds % 60}s
-                    </p>
-                    <p className="text-sm text-muted-foreground">Avg Dwell Time</p>
-                  </CardContent>
-                </Card>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
               </div>
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle className="h-4 w-4 text-success" />
