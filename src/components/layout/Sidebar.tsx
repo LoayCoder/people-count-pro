@@ -17,6 +17,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -32,9 +35,16 @@ const bottomNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const roleColors: Record<string, string> = {
+  admin: "bg-destructive/20 text-destructive",
+  operator: "bg-primary/20 text-primary",
+  viewer: "bg-muted text-muted-foreground",
+};
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { profile, role, signOut } = useAuth();
 
   return (
     <aside
@@ -131,6 +141,44 @@ export function Sidebar() {
 
           return link;
         })}
+
+        {/* User profile section */}
+        {profile && (
+          <>
+            <Separator className="my-3" />
+            <div className={cn("flex items-center gap-3 px-3", collapsed && "justify-center")}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20">
+                <Users className="h-4 w-4 text-primary" />
+              </div>
+              {!collapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {profile.full_name || "User"}
+                  </p>
+                  {role && (
+                    <Badge variant="outline" className={cn("text-xs", roleColors[role])}>
+                      {role}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Logout button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={signOut}
+          className={cn(
+            "mt-2 w-full text-sidebar-foreground hover:text-destructive",
+            collapsed ? "justify-center" : "justify-start"
+          )}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span className="ml-2">Sign Out</span>}
+        </Button>
 
         {/* Collapse toggle */}
         <Button
