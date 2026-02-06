@@ -96,8 +96,9 @@ export function DrawingCanvas({
       if (!currentLine) {
         setCurrentLine({ start: pos });
       } else if (!currentLine.end) {
+        const newLineId = generateId();
         const newLine: CountingLine = {
-          id: generateId(),
+          id: newLineId,
           start: currentLine.start,
           end: pos,
           name: `Line ${lines.length + 1}`,
@@ -105,6 +106,8 @@ export function DrawingCanvas({
         };
         onLinesChange([...lines, newLine]);
         setCurrentLine(null);
+        // Auto-select the newly created line
+        onSelectElement(newLineId, "line");
       }
     } else if (tool === "select") {
       onSelectElement(null, null);
@@ -283,39 +286,50 @@ export function DrawingCanvas({
 
       {/* Counting Lines */}
       {lines.map((line) => (
-        <g key={line.id}>
+        <g 
+          key={line.id} 
+          onClick={(e) => handleElementClick(e, "line", line.id)}
+          className="cursor-pointer"
+        >
+          {/* Invisible wider hit area for easier selection */}
           <line
             x1={line.start.x}
             y1={line.start.y}
             x2={line.end.x}
             y2={line.end.y}
-            stroke="hsl(142, 71%, 45%)"
-            strokeWidth={selectedId === line.id ? 4 : 3}
-            className="cursor-pointer"
-            onClick={(e) => handleElementClick(e, "line", line.id)}
+            stroke="transparent"
+            strokeWidth="20"
+          />
+          <line
+            x1={line.start.x}
+            y1={line.start.y}
+            x2={line.end.x}
+            y2={line.end.y}
+            stroke={selectedId === line.id ? "hsl(142, 71%, 55%)" : "hsl(142, 71%, 45%)"}
+            strokeWidth={selectedId === line.id ? 5 : 3}
           />
           {/* Direction arrow */}
           <polygon
             points={getLineArrowPoints(line.start, line.end, line.inDirection)}
-            fill="hsl(142, 71%, 45%)"
+            fill={selectedId === line.id ? "hsl(142, 71%, 55%)" : "hsl(142, 71%, 45%)"}
           />
           {/* IN/OUT labels */}
           <text
             x={(line.start.x + line.end.x) / 2}
             y={(line.start.y + line.end.y) / 2 - 20}
-            fill="hsl(142, 71%, 45%)"
+            fill={selectedId === line.id ? "hsl(142, 71%, 55%)" : "hsl(142, 71%, 45%)"}
             fontSize="14"
             fontWeight="bold"
             textAnchor="middle"
           >
-            {line.name}
+            {line.name} {selectedId === line.id ? "(selected)" : ""}
           </text>
           {/* Endpoint handles */}
           <circle
             cx={line.start.x}
             cy={line.start.y}
             r={selectedId === line.id ? 10 : 8}
-            fill="hsl(142, 71%, 45%)"
+            fill={selectedId === line.id ? "hsl(142, 71%, 55%)" : "hsl(142, 71%, 45%)"}
             stroke="white"
             strokeWidth="2"
             className="cursor-move"
@@ -325,7 +339,7 @@ export function DrawingCanvas({
             cx={line.end.x}
             cy={line.end.y}
             r={selectedId === line.id ? 10 : 8}
-            fill="hsl(142, 71%, 45%)"
+            fill={selectedId === line.id ? "hsl(142, 71%, 55%)" : "hsl(142, 71%, 45%)"}
             stroke="white"
             strokeWidth="2"
             className="cursor-move"
