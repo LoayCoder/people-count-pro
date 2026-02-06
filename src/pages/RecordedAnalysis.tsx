@@ -782,7 +782,7 @@ function CameraConfigSetup({
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>No config selected.</strong> Videos will be processed in demo mode with estimated results.{" "}
+                  <strong>No config selected.</strong> Videos will be processed with AI estimation (no counting lines).{" "}
                   <Link to="/configurator" className="text-primary hover:underline">
                     Create a camera config →
                   </Link>
