@@ -42,7 +42,6 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
-  const [demoMode, setDemoMode] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [occupancyAlerts, setOccupancyAlerts] = useState(true);
   const [spikeAlerts, setSpikeAlerts] = useState(true);
