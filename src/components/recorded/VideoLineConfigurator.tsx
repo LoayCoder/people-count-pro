@@ -145,6 +145,16 @@ export function VideoLineConfigurator({
     }
   }, [selectedId, lines]);
 
+  const handleFlipDirection = useCallback(() => {
+    if (selectedId) {
+      setLines(lines.map(l => 
+        l.id === selectedId 
+          ? { ...l, inDirection: l.inDirection === "right" ? "left" : "right" }
+          : l
+      ));
+    }
+  }, [selectedId, lines]);
+
   const handleSave = useCallback(() => {
     onSave(lines);
   }, [lines, onSave]);
@@ -189,6 +199,20 @@ export function VideoLineConfigurator({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Click start point, then end point to draw a counting line</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleFlipDirection}
+                      disabled={!selectedId || !lines.find(l => l.id === selectedId)}
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      Flip Direction
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Flip the IN/OUT direction of the selected line</TooltipContent>
                 </Tooltip>
                 <Button
                   variant="ghost"
