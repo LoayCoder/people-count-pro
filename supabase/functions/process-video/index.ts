@@ -161,9 +161,10 @@ ${lineCount > 0 ? 'Higher confidence if counting lines are well-placed for the v
         totalOut: Math.floor(baseCount * seededRandom(0.80, 0.95)),
         peakOccupancy: Math.floor(baseCount * seededRandom(0.25, 0.35)),
         avgDwellSeconds: Math.floor(seededRandom(90, 300)),
-        confidence: lineCount > 0 ? 0.75 : 0.50,
+        confidence: lineCount > 0 ? 0.50 : 0.30, // Lower confidence in demo mode
         lineCount,
         isDemo: true,
+        frameAnalysis: false,
         hourlyBreakdown: Array.from({ length: 8 }, (_, i) => ({
           hour: 9 + i,
           in: Math.floor(baseCount / 8 * seededRandom(0.7, 1.3)),
