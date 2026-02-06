@@ -268,39 +268,11 @@ export default function RecordedAnalysis() {
         </Card>
 
         {/* Quick Setup */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-base">Quick Analysis Setup</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Apply Camera Config
-                </label>
-                <Select value={selectedCamera || "none"} onValueChange={(v) => setSelectedCamera(v === "none" ? "" : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select camera (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No config</SelectItem>
-                    {cameras?.map((camera) => (
-                      <SelectItem key={camera.id} value={camera.id}>
-                        {camera.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2 flex items-end gap-2">
-                <p className="text-sm text-muted-foreground">
-                  Select a camera configuration to apply ROI and counting line settings to
-                  uploaded videos. This helps ensure consistent analysis.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <CameraConfigSetup 
+          cameras={cameras || []} 
+          selectedCamera={selectedCamera} 
+          onCameraChange={setSelectedCamera} 
+        />
 
         {/* Processing Jobs */}
         <Card>
