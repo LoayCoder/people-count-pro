@@ -638,7 +638,7 @@ export default function RecordedAnalysis() {
                     <div className="text-xs text-muted-foreground space-y-1 p-3 bg-muted/30 rounded-lg">
                       <div className="flex justify-between">
                         <span>Analysis Type:</span>
-                        <span className="font-medium">{result.isDemo ? "Demo Mode" : "AI Vision"}</span>
+                        <span className="font-medium">AI Vision Analysis</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Lines Configured:</span>
