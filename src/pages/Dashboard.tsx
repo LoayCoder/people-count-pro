@@ -46,7 +46,7 @@ export default function Dashboard() {
     const counts = liveCountsMap.get(camera.id);
     return {
       name: camera.name,
-      location: camera.sites?.name || "Unknown",
+      location: camera.site?.name || "Unknown",
       status: camera.status as "online" | "offline" | "processing" | "error",
       occupancy: counts?.occupancy || 0,
       inCount: counts?.in_count || 0,

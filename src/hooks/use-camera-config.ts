@@ -41,10 +41,10 @@ function parseConfig(raw: RawCameraConfig): CameraConfig {
   return {
     id: raw.id,
     camera_id: raw.camera_id,
-    roi_json: (raw.roi_json as ROIPolygon[]) || [],
-    line_json: (raw.line_json as CountingLine[]) || [],
-    zone_json: (raw.zone_json as Zone[]) || [],
-    thresholds_json: (raw.thresholds_json as CameraConfig["thresholds_json"]) || defaultThresholds,
+    roi_json: (raw.roi_json as unknown as ROIPolygon[]) || [],
+    line_json: (raw.line_json as unknown as CountingLine[]) || [],
+    zone_json: (raw.zone_json as unknown as Zone[]) || [],
+    thresholds_json: (raw.thresholds_json as unknown as CameraConfig["thresholds_json"]) || defaultThresholds,
     version: raw.version,
     updated_at: raw.updated_at,
   };

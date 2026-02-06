@@ -98,10 +98,10 @@ export function AlertsList({ limit = 10 }: AlertsListProps) {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   <span>{new Date(alert.created_at).toLocaleString()}</span>
-                  {alert.cameras?.name && (
+                  {alert.camera?.name && (
                     <>
                       <span>•</span>
-                      <span>{alert.cameras.name}</span>
+                      <span>{alert.camera.name}</span>
                     </>
                   )}
                 </div>
