@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Camera,
   Square,
   ArrowRightLeft,
@@ -21,13 +28,13 @@ import {
   Save,
   Undo,
   Redo,
-  ZoomIn,
-  ZoomOut,
   Move,
   Settings,
   Eye,
   Trash2,
   Loader2,
+  HelpCircle,
+  Info,
 } from "lucide-react";
 import { useCameras } from "@/hooks/use-cameras";
 import { useCameraConfig, useSaveCameraConfig } from "@/hooks/use-camera-config";
