@@ -41,6 +41,7 @@ import {
   AlertTriangle,
   Info,
   ArrowRightLeft,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,8 +58,10 @@ import { useCameras } from "@/hooks/use-cameras";
 import { useCameraConfig } from "@/hooks/use-camera-config";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
+import { VideoLineConfigurator } from "@/components/recorded/VideoLineConfigurator";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
+import type { CountingLine } from "@/components/configurator/DrawingCanvas";
 
 const statusConfig = {
   pending: { icon: Clock, className: "text-muted-foreground", label: "Pending" },
@@ -67,6 +70,13 @@ const statusConfig = {
   failed: { icon: XCircle, className: "text-destructive", label: "Failed" },
 };
 
+// Type for pending upload that needs line configuration
+interface PendingUpload {
+  fileName: string;
+  fileUrl: string;
+  file: File;
+}
+
 export default function RecordedAnalysis() {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -74,6 +84,9 @@ export default function RecordedAnalysis() {
   const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [configMode, setConfigMode] = useState<"camera" | "custom">("camera");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
