@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -29,7 +30,6 @@ import {
 import {
   Upload,
   FileVideo,
-  Play,
   CheckCircle,
   Clock,
   XCircle,
@@ -38,6 +38,9 @@ import {
   Eye,
   Trash2,
   RefreshCw,
+  AlertTriangle,
+  Info,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,9 +54,11 @@ import {
   JobResult,
 } from "@/hooks/use-recorded-jobs";
 import { useCameras } from "@/hooks/use-cameras";
+import { useCameraConfig } from "@/hooks/use-camera-config";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
 
 const statusConfig = {
   pending: { icon: Clock, className: "text-muted-foreground", label: "Pending" },
