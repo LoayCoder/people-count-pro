@@ -99,6 +99,56 @@ export default function RecordedAnalysis() {
   // Enable realtime updates
   useRecordedJobsRealtime();
 
+  // Upload file to storage and show options
+  const uploadFileToStorage = useCallback(async (file: File) => {
+    const timestamp = Date.now();
+    const fileName = `${timestamp}_${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("video-uploads")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from("video-uploads")
+      .getPublicUrl(fileName);
+
+    return { fileName, fileUrl: urlData.publicUrl };
+  }, []);
+
+  // Process job with optional custom line config
+  const createAndProcessJob = useCallback(async (
+    videoName: string,
+    videoUrl: string,
+    cameraId: string | null,
+    lineConfig: CountingLine[] | null
+  ) => {
+    const jobData: any = {
+      video_name: videoName,
+      video_url: videoUrl,
+      camera_id: cameraId,
+      status: "pending",
+      progress: 0,
+    };
+
+    // If custom lines provided, store them in the job
+    if (lineConfig && lineConfig.length > 0) {
+      jobData.line_config_json = lineConfig;
+    }
+
+    const job = await createJob.mutateAsync(jobData);
+
+    if (job?.id) {
+      processVideo.mutate(job.id);
+    }
+
+    return job;
+  }, [createJob, processVideo]);
+
   const handleFileUpload = useCallback(
     async (files: FileList | null) => {
       if (!files || files.length === 0) return;
@@ -128,46 +178,35 @@ export default function RecordedAnalysis() {
       setUploadProgress(0);
 
       try {
-        // Generate unique filename
-        const timestamp = Date.now();
-        const fileName = `${timestamp}_${file.name}`;
-
-        // Upload to storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("video-uploads")
-          .upload(fileName, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
-
-        if (uploadError) throw uploadError;
-
+        setUploadProgress(25);
+        const { fileName, fileUrl } = await uploadFileToStorage(file);
         setUploadProgress(50);
 
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-          .from("video-uploads")
-          .getPublicUrl(fileName);
-
-        // Create job record
-        const job = await createJob.mutateAsync({
-          video_name: file.name,
-          video_url: urlData.publicUrl,
-          camera_id: selectedCamera || null,
-          status: "pending",
-          progress: 0,
-        });
-
-        setUploadProgress(100);
-
-        toast({
-          title: "Upload complete",
-          description: "Video has been uploaded. Click 'Start Processing' to analyze.",
-        });
-
-        // Auto-start processing
-        if (job?.id) {
-          processVideo.mutate(job.id);
+        // Check if we should use camera config or offer custom drawing
+        if (selectedCamera && configMode === "camera") {
+          // Use existing camera config - process immediately
+          await createAndProcessJob(file.name, fileUrl, selectedCamera, null);
+          setUploadProgress(100);
+          toast({
+            title: "Upload complete",
+            description: "Video analysis started with camera configuration.",
+          });
+        } else if (configMode === "custom") {
+          // Open configurator to draw lines on this video
+          setPendingUpload({ fileName: file.name, fileUrl, file });
+          setConfigDialogOpen(true);
+          toast({
+            title: "Upload complete",
+            description: "Draw counting lines on the video frame.",
+          });
+        } else {
+          // No config selected - process with defaults
+          await createAndProcessJob(file.name, fileUrl, null, null);
+          setUploadProgress(100);
+          toast({
+            title: "Upload complete",
+            description: "Video analysis started (demo mode - no lines configured).",
+          });
         }
       } catch (error: any) {
         console.error("Upload error:", error);
@@ -181,8 +220,36 @@ export default function RecordedAnalysis() {
         setUploadProgress(0);
       }
     },
-    [selectedCamera, createJob, processVideo, toast]
+    [selectedCamera, configMode, uploadFileToStorage, createAndProcessJob, toast]
   );
+
+  // Handle save from video line configurator
+  const handleVideoConfigSave = useCallback(async (lines: CountingLine[]) => {
+    if (!pendingUpload) return;
+
+    try {
+      await createAndProcessJob(
+        pendingUpload.fileName,
+        pendingUpload.fileUrl,
+        null, // No camera ID when using custom lines
+        lines
+      );
+      
+      setConfigDialogOpen(false);
+      setPendingUpload(null);
+      
+      toast({
+        title: "Processing started",
+        description: `Video analysis started with ${lines.length} custom counting line${lines.length !== 1 ? 's' : ''}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [pendingUpload, createAndProcessJob, toast]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
