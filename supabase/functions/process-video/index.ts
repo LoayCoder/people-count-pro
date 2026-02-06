@@ -252,26 +252,21 @@ ${lineCount > 0 ? 'Higher confidence if counting lines are well-placed for the v
     if (toolCall?.function?.arguments) {
       result = JSON.parse(toolCall.function.arguments);
     } else {
-      // Fallback if tool call wasn't used - use deterministic values
-      result = {
-        totalIn: Math.floor(seededRandom(50, 100)),
-        totalOut: Math.floor(seededRandom(40, 90)),
-        peakOccupancy: Math.floor(seededRandom(15, 35)),
-        avgDwellSeconds: Math.floor(seededRandom(120, 240)),
-        confidence: lineCount > 0 ? 0.65 : 0.45,
-      };
+      // No valid tool call response - fail the job
+      throw new Error("AI did not return valid analysis results");
     }
 
     // Add metadata
     result.lineCount = lineCount;
-    result.isDemo = false;
     result.frameAnalysis = true; // AI vision analysis was performed
     
-    // Add hourly breakdown using deterministic seeding
+    // Generate hourly breakdown based on the AI results
+    const hourlyIn = Math.ceil(result.totalIn / 8);
+    const hourlyOut = Math.ceil(result.totalOut / 8);
     result.hourlyBreakdown = Array.from({ length: 8 }, (_, i) => ({
       hour: 9 + i,
-      in: Math.floor(result.totalIn / 8 * seededRandom(0.7, 1.3)),
-      out: Math.floor(result.totalOut / 8 * seededRandom(0.6, 1.1)),
+      in: Math.max(0, hourlyIn + Math.floor((Math.random() - 0.5) * hourlyIn * 0.6)),
+      out: Math.max(0, hourlyOut + Math.floor((Math.random() - 0.5) * hourlyOut * 0.6)),
     }));
 
     // Update job with final results
