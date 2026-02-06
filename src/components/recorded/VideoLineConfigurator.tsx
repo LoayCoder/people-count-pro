@@ -210,25 +210,21 @@ export function VideoLineConfigurator({
           <div className="flex-1 min-h-0 relative rounded-lg overflow-hidden bg-black flex items-center justify-center">
             {thumbnailUrl ? (
               <>
-                {thumbnailUrl.startsWith("data:") ? (
+                {thumbnailUrl === "video" ? (
+                  <video
+                    src={blobUrl || undefined}
+                    className="max-h-full max-w-full object-contain"
+                    style={{ pointerEvents: "none" }}
+                    muted
+                    playsInline
+                    autoPlay={false}
+                  />
+                ) : (
                   <img
                     src={thumbnailUrl}
                     alt="Video frame"
                     className="max-h-full max-w-full object-contain"
                     style={{ pointerEvents: "none" }}
-                  />
-                ) : (
-                  <video
-                    src={thumbnailUrl}
-                    className="max-h-full max-w-full object-contain"
-                    style={{ pointerEvents: "none" }}
-                    muted
-                    playsInline
-                    preload="metadata"
-                    onLoadedMetadata={(e) => {
-                      const video = e.currentTarget;
-                      video.currentTime = 0.5;
-                    }}
                   />
                 )}
                 <div className="absolute inset-0">
