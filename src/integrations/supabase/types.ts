@@ -548,6 +548,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          line_config_json: Json | null
           progress: number | null
           result_json: Json | null
           started_at: string | null
@@ -561,6 +562,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          line_config_json?: Json | null
           progress?: number | null
           result_json?: Json | null
           started_at?: string | null
@@ -574,6 +576,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          line_config_json?: Json | null
           progress?: number | null
           result_json?: Json | null
           started_at?: string | null

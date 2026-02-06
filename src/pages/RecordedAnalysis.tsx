@@ -41,6 +41,7 @@ import {
   AlertTriangle,
   Info,
   ArrowRightLeft,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,8 +58,10 @@ import { useCameras } from "@/hooks/use-cameras";
 import { useCameraConfig } from "@/hooks/use-camera-config";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
+import { VideoLineConfigurator } from "@/components/recorded/VideoLineConfigurator";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
+import type { CountingLine } from "@/components/configurator/DrawingCanvas";
 
 const statusConfig = {
   pending: { icon: Clock, className: "text-muted-foreground", label: "Pending" },
@@ -67,6 +70,13 @@ const statusConfig = {
   failed: { icon: XCircle, className: "text-destructive", label: "Failed" },
 };
 
+// Type for pending upload that needs line configuration
+interface PendingUpload {
+  fileName: string;
+  fileUrl: string;
+  file: File;
+}
+
 export default function RecordedAnalysis() {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -74,6 +84,9 @@ export default function RecordedAnalysis() {
   const [selectedCamera, setSelectedCamera] = useState<string>("");
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [configMode, setConfigMode] = useState<"camera" | "custom">("camera");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -85,6 +98,56 @@ export default function RecordedAnalysis() {
 
   // Enable realtime updates
   useRecordedJobsRealtime();
+
+  // Upload file to storage and show options
+  const uploadFileToStorage = useCallback(async (file: File) => {
+    const timestamp = Date.now();
+    const fileName = `${timestamp}_${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("video-uploads")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from("video-uploads")
+      .getPublicUrl(fileName);
+
+    return { fileName, fileUrl: urlData.publicUrl };
+  }, []);
+
+  // Process job with optional custom line config
+  const createAndProcessJob = useCallback(async (
+    videoName: string,
+    videoUrl: string,
+    cameraId: string | null,
+    lineConfig: CountingLine[] | null
+  ) => {
+    const jobData: any = {
+      video_name: videoName,
+      video_url: videoUrl,
+      camera_id: cameraId,
+      status: "pending",
+      progress: 0,
+    };
+
+    // If custom lines provided, store them in the job
+    if (lineConfig && lineConfig.length > 0) {
+      jobData.line_config_json = lineConfig;
+    }
+
+    const job = await createJob.mutateAsync(jobData);
+
+    if (job?.id) {
+      processVideo.mutate(job.id);
+    }
+
+    return job;
+  }, [createJob, processVideo]);
 
   const handleFileUpload = useCallback(
     async (files: FileList | null) => {
@@ -115,46 +178,35 @@ export default function RecordedAnalysis() {
       setUploadProgress(0);
 
       try {
-        // Generate unique filename
-        const timestamp = Date.now();
-        const fileName = `${timestamp}_${file.name}`;
-
-        // Upload to storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("video-uploads")
-          .upload(fileName, file, {
-            cacheControl: "3600",
-            upsert: false,
-          });
-
-        if (uploadError) throw uploadError;
-
+        setUploadProgress(25);
+        const { fileName, fileUrl } = await uploadFileToStorage(file);
         setUploadProgress(50);
 
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-          .from("video-uploads")
-          .getPublicUrl(fileName);
-
-        // Create job record
-        const job = await createJob.mutateAsync({
-          video_name: file.name,
-          video_url: urlData.publicUrl,
-          camera_id: selectedCamera || null,
-          status: "pending",
-          progress: 0,
-        });
-
-        setUploadProgress(100);
-
-        toast({
-          title: "Upload complete",
-          description: "Video has been uploaded. Click 'Start Processing' to analyze.",
-        });
-
-        // Auto-start processing
-        if (job?.id) {
-          processVideo.mutate(job.id);
+        // Check if we should use camera config or offer custom drawing
+        if (selectedCamera && configMode === "camera") {
+          // Use existing camera config - process immediately
+          await createAndProcessJob(file.name, fileUrl, selectedCamera, null);
+          setUploadProgress(100);
+          toast({
+            title: "Upload complete",
+            description: "Video analysis started with camera configuration.",
+          });
+        } else if (configMode === "custom") {
+          // Open configurator to draw lines on this video
+          setPendingUpload({ fileName: file.name, fileUrl, file });
+          setConfigDialogOpen(true);
+          toast({
+            title: "Upload complete",
+            description: "Draw counting lines on the video frame.",
+          });
+        } else {
+          // No config selected - process with defaults
+          await createAndProcessJob(file.name, fileUrl, null, null);
+          setUploadProgress(100);
+          toast({
+            title: "Upload complete",
+            description: "Video analysis started (demo mode - no lines configured).",
+          });
         }
       } catch (error: any) {
         console.error("Upload error:", error);
@@ -168,8 +220,36 @@ export default function RecordedAnalysis() {
         setUploadProgress(0);
       }
     },
-    [selectedCamera, createJob, processVideo, toast]
+    [selectedCamera, configMode, uploadFileToStorage, createAndProcessJob, toast]
   );
+
+  // Handle save from video line configurator
+  const handleVideoConfigSave = useCallback(async (lines: CountingLine[]) => {
+    if (!pendingUpload) return;
+
+    try {
+      await createAndProcessJob(
+        pendingUpload.fileName,
+        pendingUpload.fileUrl,
+        null, // No camera ID when using custom lines
+        lines
+      );
+      
+      setConfigDialogOpen(false);
+      setPendingUpload(null);
+      
+      toast({
+        title: "Processing started",
+        description: `Video analysis started with ${lines.length} custom counting line${lines.length !== 1 ? 's' : ''}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }, [pendingUpload, createAndProcessJob, toast]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -271,7 +351,9 @@ export default function RecordedAnalysis() {
         <CameraConfigSetup 
           cameras={cameras || []} 
           selectedCamera={selectedCamera} 
-          onCameraChange={setSelectedCamera} 
+          onCameraChange={setSelectedCamera}
+          configMode={configMode}
+          onConfigModeChange={setConfigMode}
         />
 
         {/* Processing Jobs */}
@@ -479,6 +561,19 @@ export default function RecordedAnalysis() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Video Line Configurator Dialog */}
+      <VideoLineConfigurator
+        open={configDialogOpen}
+        onOpenChange={(open) => {
+          setConfigDialogOpen(open);
+          if (!open) setPendingUpload(null);
+        }}
+        videoName={pendingUpload?.fileName || ""}
+        videoUrl={pendingUpload?.fileUrl}
+        existingLines={[]}
+        onSave={handleVideoConfigSave}
+      />
     </div>
   );
 }
@@ -487,11 +582,15 @@ export default function RecordedAnalysis() {
 function CameraConfigSetup({ 
   cameras, 
   selectedCamera, 
-  onCameraChange 
+  onCameraChange,
+  configMode,
+  onConfigModeChange,
 }: { 
   cameras: any[]; 
   selectedCamera: string; 
   onCameraChange: (v: string) => void;
+  configMode: "camera" | "custom";
+  onConfigModeChange: (mode: "camera" | "custom") => void;
 }) {
   const { data: config } = useCameraConfig(selectedCamera || null);
   const lineCount = config?.line_json?.length || 0;
@@ -500,70 +599,104 @@ function CameraConfigSetup({
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="text-base">Quick Analysis Setup</CardTitle>
+        <CardTitle className="text-base">Analysis Configuration</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Apply Camera Config
-            </label>
-            <Select value={selectedCamera || "none"} onValueChange={(v) => onCameraChange(v === "none" ? "" : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select camera (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No config</SelectItem>
-                {cameras?.map((camera) => (
-                  <SelectItem key={camera.id} value={camera.id}>
-                    {camera.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="md:col-span-2 flex items-end gap-2">
-            {selectedCamera && config ? (
-              <div className="flex items-center gap-4 text-sm">
-                <Badge variant={lineCount > 0 ? "default" : "secondary"}>
-                  <ArrowRightLeft className="mr-1 h-3 w-3" />
-                  {lineCount} counting line{lineCount !== 1 ? 's' : ''}
-                </Badge>
-                <span className="text-muted-foreground">
-                  Config v{config.version}
-                </span>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Select a camera configuration to apply counting line settings to uploaded videos.
-              </p>
-            )}
-          </div>
+        {/* Config Mode Toggle */}
+        <div className="flex gap-2">
+          <Button
+            variant={configMode === "camera" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onConfigModeChange("camera")}
+            className="flex-1"
+          >
+            <ArrowRightLeft className="h-4 w-4 mr-2" />
+            Use Camera Config
+          </Button>
+          <Button
+            variant={configMode === "custom" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onConfigModeChange("custom")}
+            className="flex-1"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Draw on Video
+          </Button>
         </div>
 
-        {/* Warning: No camera selected */}
-        {!selectedCamera && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-sm">
-              <strong>Tip:</strong> Select a camera with configured counting lines for more consistent analysis results.{" "}
-              <Link to="/configurator" className="text-primary hover:underline">
-                Go to Configurator →
-              </Link>
-            </AlertDescription>
-          </Alert>
-        )}
+        {configMode === "camera" ? (
+          <>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  Select Camera Config
+                </label>
+                <Select value={selectedCamera || "none"} onValueChange={(v) => onCameraChange(v === "none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select camera (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No config (demo mode)</SelectItem>
+                    {cameras?.map((camera) => (
+                      <SelectItem key={camera.id} value={camera.id}>
+                        {camera.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 flex items-end gap-2">
+                {selectedCamera && config ? (
+                  <div className="flex items-center gap-4 text-sm">
+                    <Badge variant={lineCount > 0 ? "default" : "secondary"}>
+                      <ArrowRightLeft className="mr-1 h-3 w-3" />
+                      {lineCount} counting line{lineCount !== 1 ? 's' : ''}
+                    </Badge>
+                    <span className="text-muted-foreground">
+                      Config v{config.version}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Reuse counting lines from an existing camera configuration.
+                  </p>
+                )}
+              </div>
+            </div>
 
-        {/* Warning: Camera selected but no counting lines */}
-        {hasNoLines && (
-          <Alert variant="default" className="border-warning/50 bg-warning/10">
-            <AlertTriangle className="h-4 w-4 text-warning" />
+            {/* Warning: No camera selected */}
+            {!selectedCamera && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>No config selected.</strong> Videos will be processed in demo mode with estimated results.{" "}
+                  <Link to="/configurator" className="text-primary hover:underline">
+                    Create a camera config →
+                  </Link>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Warning: Camera selected but no counting lines */}
+            {hasNoLines && (
+              <Alert variant="default" className="border-warning/50 bg-warning/10">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-sm">
+                  <strong>No counting lines configured.</strong> This camera has no counting lines defined. 
+                  Results will be estimates only.{" "}
+                  <Link to="/configurator" className="text-primary hover:underline">
+                    Add counting lines →
+                  </Link>
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        ) : (
+          <Alert className="border-primary/50 bg-primary/5">
+            <Pencil className="h-4 w-4 text-primary" />
             <AlertDescription className="text-sm">
-              <strong>No counting lines configured.</strong> This camera has no counting lines defined. 
-              Results will be estimates only.{" "}
-              <Link to="/configurator" className="text-primary hover:underline">
-                Add counting lines →
-              </Link>
+              <strong>Custom drawing mode:</strong> When you upload a video, you'll be able to draw counting lines 
+              directly on the first frame before processing. This is ideal for one-off analysis of videos from different angles.
             </AlertDescription>
           </Alert>
         )}

@@ -60,19 +60,24 @@ serve(async (req) => {
       );
     }
 
-    // Get camera configuration if camera is selected
-    let cameraConfig: CameraConfig | null = null;
-    if (job.camera_id) {
+    // Priority: Per-video line config > Camera config
+    let countingLines: CountingLine[] = [];
+    
+    // Check for per-video line configuration first
+    if (job.line_config_json && Array.isArray(job.line_config_json) && job.line_config_json.length > 0) {
+      countingLines = job.line_config_json as CountingLine[];
+    } else if (job.camera_id) {
+      // Fall back to camera configuration
       const { data: configData } = await supabase
         .from("camera_configs")
         .select("line_json, roi_json, thresholds_json")
         .eq("camera_id", job.camera_id)
         .maybeSingle();
       
-      cameraConfig = configData as CameraConfig | null;
+      const cameraConfig = configData as CameraConfig | null;
+      countingLines = (cameraConfig?.line_json as CountingLine[]) || [];
     }
 
-    const countingLines = (cameraConfig?.line_json as CountingLine[]) || [];
     const lineCount = countingLines.length;
 
     // Update job status to processing
