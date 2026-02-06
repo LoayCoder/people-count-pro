@@ -22,7 +22,8 @@ interface HeaderProps {
 export function Header({ title, subtitle }: HeaderProps) {
   const { user, profile, role, signOut } = useAuth();
   const navigate = useNavigate();
-  const { alerts } = useAlerts();
+  const alertsQuery = useAlerts({ limit: 50 });
+  const alerts = alertsQuery.data;
 
   const newAlertsCount = alerts?.filter((a) => a.status === "new").length || 0;
 
