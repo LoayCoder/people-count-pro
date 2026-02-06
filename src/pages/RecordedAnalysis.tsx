@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -42,6 +42,8 @@ import {
   Info,
   ArrowRightLeft,
   Pencil,
+  BrainCircuit,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +61,7 @@ import { useCameraConfig } from "@/hooks/use-camera-config";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
 import { VideoLineConfigurator } from "@/components/recorded/VideoLineConfigurator";
+import { VideoPlayer } from "@/components/recorded/VideoPlayer";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import type { CountingLine } from "@/components/configurator/DrawingCanvas";
