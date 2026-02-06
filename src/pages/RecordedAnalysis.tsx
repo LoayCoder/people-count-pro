@@ -414,9 +414,17 @@ export default function RecordedAnalysis() {
             </DialogDescription>
           </DialogHeader>
           {selectedJob?.result_json && (() => {
-            const result = selectedJob.result_json as unknown as JobResult;
+            const result = selectedJob.result_json as unknown as JobResult & { isDemo?: boolean; lineCount?: number };
             return (
               <div className="grid gap-4 py-4">
+                {result.isDemo && (
+                  <Alert variant="default" className="border-warning/50 bg-warning/10">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <AlertDescription className="text-sm">
+                      <strong>Demo Mode:</strong> These are simulated results. For accurate counting, integrate a Computer Vision backend.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <Card>
                     <CardContent className="p-4 text-center">
@@ -458,6 +466,13 @@ export default function RecordedAnalysis() {
                   <span>
                     Confidence: {(result.confidence * 100).toFixed(0)}%
                   </span>
+                  {result.lineCount !== undefined && result.lineCount > 0 && (
+                    <>
+                      <span className="mx-2">•</span>
+                      <ArrowRightLeft className="h-4 w-4" />
+                      <span>{result.lineCount} counting line{result.lineCount !== 1 ? 's' : ''} applied</span>
+                    </>
+                  )}
                 </div>
               </div>
             );
