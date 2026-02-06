@@ -273,12 +273,12 @@ export default function RecordedAnalysis() {
                 <label className="mb-2 block text-sm font-medium">
                   Apply Camera Config
                 </label>
-                <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+                <Select value={selectedCamera || "none"} onValueChange={(v) => setSelectedCamera(v === "none" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select camera (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No config</SelectItem>
+                    <SelectItem value="none">No config</SelectItem>
                     {cameras?.map((camera) => (
                       <SelectItem key={camera.id} value={camera.id}>
                         {camera.name}
