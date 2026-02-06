@@ -135,7 +135,6 @@ export default function Settings() {
 
   const handleSaveSystemPrefs = () => {
     updateMultipleSettings.mutate({
-      demo_mode: demoMode,
       auto_refresh: autoRefresh,
     });
   };
