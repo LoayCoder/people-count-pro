@@ -15,6 +15,7 @@ import RecordedAnalysis from "./pages/RecordedAnalysis";
 import Alerts from "./pages/Alerts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import UserManagement from "./pages/UserManagement";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -52,6 +53,7 @@ const App = () => (
                 <Route path="/alerts" element={<Alerts />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/users" element={<UserManagement />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
