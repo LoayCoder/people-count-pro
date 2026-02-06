@@ -570,6 +570,7 @@ export default function RecordedAnalysis() {
           if (!open) setPendingUpload(null);
         }}
         videoName={pendingUpload?.fileName || ""}
+        videoFile={pendingUpload?.file}
         videoUrl={pendingUpload?.fileUrl}
         existingLines={[]}
         onSave={handleVideoConfigSave}

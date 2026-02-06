@@ -30,6 +30,7 @@ interface VideoLineConfiguratorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   videoName: string;
+  videoFile?: File;
   videoUrl?: string;
   existingLines?: CountingLine[];
   onSave: (lines: CountingLine[]) => void;
@@ -40,6 +41,7 @@ export function VideoLineConfigurator({
   open,
   onOpenChange,
   videoName,
+  videoFile,
   videoUrl,
   existingLines = [],
   onSave,
@@ -49,7 +51,7 @@ export function VideoLineConfigurator({
   const [selectedTool, setSelectedTool] = useState<DrawingTool>("line");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -60,76 +62,77 @@ export function VideoLineConfigurator({
     }
   }, [open, existingLines]);
 
-  // Extract thumbnail from video - optimized for speed
+  // Create blob URL from file for CORS-free access
   useEffect(() => {
-    if (open && videoUrl) {
-      setThumbnailUrl(null);
-      
-      const video = document.createElement("video");
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = "auto";
-      
-      // Try without crossOrigin first for faster loading
-      // Only add crossOrigin if we get a security error
-      let triedWithCors = false;
-      
-      const extractFrame = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          // Use standard 16:9 aspect ratio if dimensions not available
-          canvas.width = video.videoWidth || 1920;
-          canvas.height = video.videoHeight || 1080;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-            setThumbnailUrl(dataUrl);
-          }
-        } catch (e) {
-          // Security error - try with crossOrigin
-          if (!triedWithCors && e instanceof DOMException && e.name === "SecurityError") {
-            triedWithCors = true;
-            video.crossOrigin = "anonymous";
-            video.load();
-            return;
-          }
-          console.error("Failed to extract thumbnail:", e);
-          // Use video URL directly as fallback (video element will show it)
-          setThumbnailUrl(videoUrl);
-        }
-      };
-      
-      video.onloadedmetadata = () => {
-        // Seek to 0.5 seconds for faster frame extraction
-        video.currentTime = Math.min(0.5, video.duration || 0.5);
-      };
-      
-      video.onseeked = extractFrame;
-      
-      // Fallback: if seeking doesn't work, try on canplay
-      video.oncanplay = () => {
-        if (!thumbnailUrl) {
-          extractFrame();
-        }
-      };
-      
-      video.onerror = () => {
-        console.error("Failed to load video for thumbnail");
-        // Use video URL directly as fallback
-        setThumbnailUrl(videoUrl);
-      };
-      
-      video.src = videoUrl;
-      video.load();
-      
+    if (open && videoFile) {
+      const url = URL.createObjectURL(videoFile);
+      setBlobUrl(url);
       return () => {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
+        URL.revokeObjectURL(url);
+        setBlobUrl(null);
       };
+    } else if (open && videoUrl) {
+      setBlobUrl(videoUrl);
     }
-  }, [open, videoUrl]);
+  }, [open, videoFile, videoUrl]);
+
+  // Extract thumbnail from video using blob URL
+  useEffect(() => {
+    if (!open || !blobUrl) {
+      setThumbnailUrl(null);
+      return;
+    }
+
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "auto";
+    
+    const extractFrame = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 1920;
+        canvas.height = video.videoHeight || 1080;
+        const ctx = canvas.getContext("2d");
+        if (ctx && video.videoWidth > 0) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          setThumbnailUrl(dataUrl);
+        }
+      } catch (e) {
+        console.error("Failed to extract thumbnail:", e);
+        // Fallback: show video element directly
+        setThumbnailUrl("video");
+      }
+    };
+    
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(0.1, video.duration || 0.1);
+    };
+    
+    video.onseeked = extractFrame;
+    
+    video.oncanplaythrough = () => {
+      if (!thumbnailUrl) {
+        extractFrame();
+      }
+    };
+    
+    video.onerror = (e) => {
+      console.error("Failed to load video for thumbnail:", e);
+      // Fallback: show video element directly
+      setThumbnailUrl("video");
+    };
+    
+    video.src = blobUrl;
+    video.load();
+    
+    return () => {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+  }, [open, blobUrl]);
 
   const handleSelectElement = useCallback((id: string | null, type: "roi" | "line" | "zone" | null) => {
     setSelectedId(id);
@@ -207,25 +210,21 @@ export function VideoLineConfigurator({
           <div className="flex-1 min-h-0 relative rounded-lg overflow-hidden bg-black flex items-center justify-center">
             {thumbnailUrl ? (
               <>
-                {thumbnailUrl.startsWith("data:") ? (
+                {thumbnailUrl === "video" ? (
+                  <video
+                    src={blobUrl || undefined}
+                    className="max-h-full max-w-full object-contain"
+                    style={{ pointerEvents: "none" }}
+                    muted
+                    playsInline
+                    autoPlay={false}
+                  />
+                ) : (
                   <img
                     src={thumbnailUrl}
                     alt="Video frame"
                     className="max-h-full max-w-full object-contain"
                     style={{ pointerEvents: "none" }}
-                  />
-                ) : (
-                  <video
-                    src={thumbnailUrl}
-                    className="max-h-full max-w-full object-contain"
-                    style={{ pointerEvents: "none" }}
-                    muted
-                    playsInline
-                    preload="metadata"
-                    onLoadedMetadata={(e) => {
-                      const video = e.currentTarget;
-                      video.currentTime = 0.5;
-                    }}
                   />
                 )}
                 <div className="absolute inset-0">
