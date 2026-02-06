@@ -30,6 +30,7 @@ interface VideoLineConfiguratorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   videoName: string;
+  videoFile?: File;
   videoUrl?: string;
   existingLines?: CountingLine[];
   onSave: (lines: CountingLine[]) => void;
