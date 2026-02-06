@@ -51,7 +51,7 @@ export function VideoLineConfigurator({
   const [selectedTool, setSelectedTool] = useState<DrawingTool>("line");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   // Reset state when dialog opens
   useEffect(() => {
