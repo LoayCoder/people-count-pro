@@ -331,7 +331,7 @@ export default function RecordedAnalysis() {
                     const StatusIcon = statusConfig[job.status as keyof typeof statusConfig]?.icon || Clock;
                     const statusClass = statusConfig[job.status as keyof typeof statusConfig]?.className || "";
                     const statusLabel = statusConfig[job.status as keyof typeof statusConfig]?.label || job.status;
-                    const result = job.result_json as JobResult | null;
+                    const result = job.result_json as unknown as JobResult | null;
 
                     return (
                       <TableRow key={job.id}>
