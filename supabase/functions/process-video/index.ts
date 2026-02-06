@@ -146,45 +146,19 @@ ${lineCount > 0 ? 'Higher confidence if counting lines are well-placed for the v
       .update({ progress: 30 })
       .eq("id", jobId);
 
-    // Use deterministic seed based on video name for consistent demo results
-    const seed = job.video_name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-    const seededRandom = (min: number, max: number) => {
-      const x = Math.sin(seed) * 10000;
-      return min + (x - Math.floor(x)) * (max - min);
-    };
-
     if (!lovableApiKey) {
-      // Demo mode: Generate consistent results based on video name (deterministic)
-      const baseCount = Math.floor(seededRandom(40, 120));
-      const result = {
-        totalIn: baseCount,
-        totalOut: Math.floor(baseCount * seededRandom(0.80, 0.95)),
-        peakOccupancy: Math.floor(baseCount * seededRandom(0.25, 0.35)),
-        avgDwellSeconds: Math.floor(seededRandom(90, 300)),
-        confidence: lineCount > 0 ? 0.50 : 0.30, // Lower confidence in demo mode
-        lineCount,
-        isDemo: true,
-        frameAnalysis: false,
-        hourlyBreakdown: Array.from({ length: 8 }, (_, i) => ({
-          hour: 9 + i,
-          in: Math.floor(baseCount / 8 * seededRandom(0.7, 1.3)),
-          out: Math.floor(baseCount / 8 * seededRandom(0.6, 1.1)),
-        })),
-      };
-
+      // Production mode: AI processing is required
       await supabase
         .from("recorded_jobs")
         .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          progress: 100,
-          result_json: result,
+          status: "failed",
+          error_message: "AI processing not configured. Contact administrator.",
         })
         .eq("id", jobId);
 
       return new Response(
-        JSON.stringify({ success: true, result, isDemo: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "AI processing not configured" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
