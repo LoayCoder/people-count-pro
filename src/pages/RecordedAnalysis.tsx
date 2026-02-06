@@ -51,7 +51,7 @@ import {
   JobResult,
 } from "@/hooks/use-recorded-jobs";
 import { useCameras } from "@/hooks/use-cameras";
-import { PageLoader } from "@/components/common/LoadingSpinner";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
 import { formatDistanceToNow } from "date-fns";
 
@@ -193,7 +193,7 @@ export default function RecordedAnalysis() {
     return (
       <div className="min-h-screen">
         <Header title="Recorded Video Analysis" subtitle="Process and analyze recorded video files" />
-        <PageLoader text="Loading jobs..." />
+        <LoadingSpinner />
       </div>
     );
   }

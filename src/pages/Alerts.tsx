@@ -27,87 +27,14 @@ import {
   Server,
   Clock,
   Search,
-  Filter,
   CheckCircle,
   XCircle,
   Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Alert {
-  id: string;
-  type: "occupancy_threshold" | "spike_detected" | "camera_offline" | "worker_failure";
-  severity: "low" | "medium" | "high" | "critical";
-  message: string;
-  camera?: string;
-  site?: string;
-  timestamp: string;
-  status: "new" | "acknowledged" | "closed";
-  acknowledgedBy?: string;
-}
-
-const mockAlerts: Alert[] = [
-  {
-    id: "1",
-    type: "occupancy_threshold",
-    severity: "critical",
-    message: "Occupancy exceeded 95% threshold at Conference Hall",
-    camera: "Conference Hall",
-    site: "Building A",
-    timestamp: "2024-01-15 14:32:15",
-    status: "new",
-  },
-  {
-    id: "2",
-    type: "occupancy_threshold",
-    severity: "high",
-    message: "Occupancy exceeded 90% threshold at Main Entrance",
-    camera: "Main Entrance",
-    site: "Building A",
-    timestamp: "2024-01-15 14:28:42",
-    status: "new",
-  },
-  {
-    id: "3",
-    type: "spike_detected",
-    severity: "medium",
-    message: "Sudden increase of 35 people detected at Lobby",
-    camera: "Lobby Camera 1",
-    site: "Building A",
-    timestamp: "2024-01-15 14:15:00",
-    status: "acknowledged",
-    acknowledgedBy: "John Smith",
-  },
-  {
-    id: "4",
-    type: "camera_offline",
-    severity: "critical",
-    message: "Connection lost to Parking Entrance camera",
-    camera: "Parking Entrance",
-    site: "Parking Lot",
-    timestamp: "2024-01-15 13:45:22",
-    status: "acknowledged",
-    acknowledgedBy: "Admin",
-  },
-  {
-    id: "5",
-    type: "worker_failure",
-    severity: "high",
-    message: "AI worker process terminated unexpectedly",
-    timestamp: "2024-01-15 12:00:00",
-    status: "closed",
-  },
-  {
-    id: "6",
-    type: "occupancy_threshold",
-    severity: "low",
-    message: "Occupancy reached 70% at Cafeteria",
-    camera: "Cafeteria Main",
-    site: "Building B",
-    timestamp: "2024-01-15 11:30:00",
-    status: "closed",
-  },
-];
+import { useAlerts, useAcknowledgeAlert, useCloseAlert } from "@/hooks/use-alerts";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { EmptyState } from "@/components/common/EmptyState";
 
 const alertIcons = {
   occupancy_threshold: Bell,
@@ -132,22 +59,45 @@ const statusBadge = {
 export default function Alerts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
 
-  const filteredAlerts = mockAlerts.filter((alert) => {
+  const { data: alerts, isLoading } = useAlerts();
+  const acknowledgeAlert = useAcknowledgeAlert();
+  const closeAlert = useCloseAlert();
+
+  const filteredAlerts = alerts?.filter((alert) => {
     const matchesSearch =
       alert.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.camera?.toLowerCase().includes(searchQuery.toLowerCase());
+      alert.camera?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    if (activeTab === "all") return matchesSearch;
-    return matchesSearch && alert.status === activeTab;
-  });
+    const matchesSeverity = severityFilter === "all" || alert.severity === severityFilter;
+    
+    if (activeTab === "all") return matchesSearch && matchesSeverity;
+    return matchesSearch && matchesSeverity && alert.status === activeTab;
+  }) || [];
 
   const alertCounts = {
-    all: mockAlerts.length,
-    new: mockAlerts.filter((a) => a.status === "new").length,
-    acknowledged: mockAlerts.filter((a) => a.status === "acknowledged").length,
-    closed: mockAlerts.filter((a) => a.status === "closed").length,
+    all: alerts?.length || 0,
+    new: alerts?.filter((a) => a.status === "new").length || 0,
+    acknowledged: alerts?.filter((a) => a.status === "acknowledged").length || 0,
+    closed: alerts?.filter((a) => a.status === "closed").length || 0,
   };
+
+  const severityCounts = {
+    critical: alerts?.filter((a) => a.severity === "critical" && a.status !== "closed").length || 0,
+    high: alerts?.filter((a) => a.severity === "high" && a.status !== "closed").length || 0,
+    medium: alerts?.filter((a) => a.severity === "medium" && a.status !== "closed").length || 0,
+    low: alerts?.filter((a) => a.severity === "low" && a.status !== "closed").length || 0,
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <Header title="Alerts" subtitle="Monitor and manage system alerts" />
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -162,7 +112,7 @@ export default function Alerts() {
                 <AlertTriangle className="h-6 w-6 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">2</p>
+                <p className="text-2xl font-bold">{severityCounts.critical}</p>
                 <p className="text-sm text-muted-foreground">Critical</p>
               </div>
             </CardContent>
@@ -173,7 +123,7 @@ export default function Alerts() {
                 <Bell className="h-6 w-6 text-destructive" />
               </div>
               <div>
-                <p className="text-2xl font-bold">2</p>
+                <p className="text-2xl font-bold">{severityCounts.high}</p>
                 <p className="text-sm text-muted-foreground">High</p>
               </div>
             </CardContent>
@@ -184,7 +134,7 @@ export default function Alerts() {
                 <Bell className="h-6 w-6 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">1</p>
+                <p className="text-2xl font-bold">{severityCounts.medium}</p>
                 <p className="text-sm text-muted-foreground">Medium</p>
               </div>
             </CardContent>
@@ -195,7 +145,7 @@ export default function Alerts() {
                 <Bell className="h-6 w-6 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold">1</p>
+                <p className="text-2xl font-bold">{severityCounts.low}</p>
                 <p className="text-sm text-muted-foreground">Low</p>
               </div>
             </CardContent>
@@ -214,28 +164,18 @@ export default function Alerts() {
                 className="w-64 pl-9"
               />
             </div>
-            <Select defaultValue="all-severity">
+            <Select value={severityFilter} onValueChange={setSeverityFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Severity" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all-severity">All Severity</SelectItem>
+                <SelectItem value="all">All Severity</SelectItem>
                 <SelectItem value="critical">Critical</SelectItem>
                 <SelectItem value="high">High</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Acknowledge Selected
-            </Button>
-            <Button variant="outline" size="sm">
-              <XCircle className="mr-2 h-4 w-4" />
-              Close Selected
-            </Button>
           </div>
         </div>
 
@@ -259,110 +199,124 @@ export default function Alerts() {
               </TabsList>
             </CardHeader>
             <CardContent className="pt-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <input type="checkbox" className="rounded border-border" />
-                    </TableHead>
-                    <TableHead>Alert</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead className="w-24">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAlerts.map((alert) => {
-                    const Icon = alertIcons[alert.type];
-                    const severity = severityStyles[alert.severity];
-                    const status = statusBadge[alert.status];
+              {filteredAlerts.length === 0 ? (
+                <EmptyState
+                  icon={Bell}
+                  title="No alerts found"
+                  description={searchQuery || severityFilter !== "all" ? "No alerts match your filters" : "No alerts have been generated"}
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Alert</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead className="w-24">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAlerts.map((alert) => {
+                      const Icon = alertIcons[alert.type as keyof typeof alertIcons] || Bell;
+                      const severity = severityStyles[alert.severity as keyof typeof severityStyles] || severityStyles.low;
+                      const status = statusBadge[alert.status as keyof typeof statusBadge] || statusBadge.new;
 
-                    return (
-                      <TableRow
-                        key={alert.id}
-                        className={cn(
-                          alert.status === "new" && alert.severity === "critical" && "bg-destructive/5"
-                        )}
-                      >
-                        <TableCell>
-                          <input type="checkbox" className="rounded border-border" />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-start gap-3">
-                            <div
+                      return (
+                        <TableRow
+                          key={alert.id}
+                          className={cn(
+                            alert.status === "new" && alert.severity === "critical" && "bg-destructive/5"
+                          )}
+                        >
+                          <TableCell>
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={cn(
+                                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                                  severity.bg
+                                )}
+                              >
+                                <Icon className={cn("h-4 w-4", severity.text)} />
+                              </div>
+                              <div>
+                                <p className="font-medium">{alert.message}</p>
+                                {alert.acknowledged_by && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Acknowledged by {alert.acknowledged_by}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {alert.camera?.name && (
+                              <div>
+                                <p className="text-sm">{alert.camera.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {alert.site?.name}
+                                </p>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
                               className={cn(
-                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                                severity.bg
+                                "text-xs capitalize",
+                                severity.bg,
+                                severity.text,
+                                severity.border
                               )}
                             >
-                              <Icon className={cn("h-4 w-4", severity.text)} />
+                              {alert.severity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={cn("text-xs", status.className)}
+                            >
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {new Date(alert.created_at).toLocaleString()}
                             </div>
-                            <div>
-                              <p className="font-medium">{alert.message}</p>
-                              {alert.acknowledgedBy && (
-                                <p className="text-xs text-muted-foreground">
-                                  Acknowledged by {alert.acknowledgedBy}
-                                </p>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {alert.status === "new" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => acknowledgeAlert.mutate(alert.id)}
+                                  title="Acknowledge"
+                                >
+                                  <CheckCircle className="h-4 w-4 text-success" />
+                                </Button>
+                              )}
+                              {alert.status !== "closed" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => closeAlert.mutate(alert.id)}
+                                  title="Close"
+                                >
+                                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                                </Button>
                               )}
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {alert.camera && (
-                            <div>
-                              <p className="text-sm">{alert.camera}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {alert.site}
-                              </p>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs capitalize",
-                              severity.bg,
-                              severity.text,
-                              severity.border
-                            )}
-                          >
-                            {alert.severity}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={cn("text-xs", status.className)}
-                          >
-                            {status.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {alert.timestamp}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {alert.status === "new" && (
-                              <Button variant="ghost" size="icon">
-                                <CheckCircle className="h-4 w-4 text-success" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Tabs>
         </Card>
