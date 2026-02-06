@@ -6,6 +6,7 @@ import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 type Alert = Tables<"alerts">;
 type AlertUpdate = TablesUpdate<"alerts">;
+type AlertStatus = "new" | "acknowledged" | "closed";
 
 export function useAlerts(options?: { status?: string; limit?: number }) {
   return useQuery({
