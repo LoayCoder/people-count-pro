@@ -2,7 +2,6 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -11,14 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -26,65 +17,69 @@ import {
   Download,
   Calendar as CalendarIcon,
   FileSpreadsheet,
-  File,
   Clock,
   ArrowUpRight,
   ArrowDownRight,
   TrendingUp,
-  Users,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
-import { format } from "date-fns";
+import { useState, useMemo } from "react";
+import { format, subDays } from "date-fns";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { OccupancyChart } from "@/components/dashboard/OccupancyChart";
 import { InOutChart } from "@/components/dashboard/InOutChart";
-
-interface Report {
-  id: string;
-  name: string;
-  type: string;
-  dateRange: string;
-  createdAt: string;
-  size: string;
-}
-
-const mockReports: Report[] = [
-  {
-    id: "1",
-    name: "Daily Summary - 2024-01-15",
-    type: "Daily",
-    dateRange: "Jan 15, 2024",
-    createdAt: "Jan 15, 2024 23:59",
-    size: "245 KB",
-  },
-  {
-    id: "2",
-    name: "Weekly Report - Week 2",
-    type: "Weekly",
-    dateRange: "Jan 8-14, 2024",
-    createdAt: "Jan 14, 2024 23:59",
-    size: "1.2 MB",
-  },
-  {
-    id: "3",
-    name: "Monthly Report - December 2023",
-    type: "Monthly",
-    dateRange: "Dec 1-31, 2023",
-    createdAt: "Jan 1, 2024 00:15",
-    size: "3.8 MB",
-  },
-  {
-    id: "4",
-    name: "Custom Analysis - Conference Event",
-    type: "Custom",
-    dateRange: "Jan 10, 2024 09:00-17:00",
-    createdAt: "Jan 10, 2024 18:30",
-    size: "520 KB",
-  },
-];
+import { useSites } from "@/hooks/use-sites";
+import { useCameras } from "@/hooks/use-cameras";
+import { useReportStats, useExportReport, getDateRangeForType, ReportFilters } from "@/hooks/use-reports";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export default function Reports() {
-  const [date, setDate] = useState<Date>();
+  const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly" | "custom">("daily");
+  const [siteId, setSiteId] = useState<string>("all");
+  const [cameraId, setCameraId] = useState<string>("all");
+  const [date, setDate] = useState<Date>(new Date());
+
+  const sitesQuery = useSites();
+  const camerasQuery = useCameras();
+
+  const sites = sitesQuery.data;
+  const cameras = camerasQuery.data;
+
+  // Calculate date range based on report type
+  const dateRange = getDateRangeForType(reportType);
+  const filters: ReportFilters = {
+    type: reportType,
+    startDate: reportType === "custom" ? (date || subDays(new Date(), 1)) : dateRange.startDate,
+    endDate: reportType === "custom" ? (date || new Date()) : dateRange.endDate,
+    siteId,
+    cameraId,
+  };
+
+  const { data: reportData, isLoading } = useReportStats(filters);
+  const exportReport = useExportReport();
+
+  // Transform daily data to chart format
+  const chartData = useMemo(() => {
+    if (!reportData?.dailyData) return [];
+    return reportData.dailyData.map((item) => ({
+      hour: format(new Date(item.date), "MMM dd"),
+      in: item.totalIn,
+      out: item.totalOut,
+      occupancy: item.peakOccupancy,
+    }));
+  }, [reportData?.dailyData]);
+
+  const handleExportCSV = () => {
+    exportReport.mutate({ filters, format: "csv" });
+  };
+
+  const formatDwellTime = (seconds?: number) => {
+    if (!seconds) return "N/A";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
 
   return (
     <div className="min-h-screen">
@@ -100,7 +95,7 @@ export default function Reports() {
             <div className="grid gap-4 md:grid-cols-5">
               <div className="space-y-2">
                 <Label>Report Type</Label>
-                <Select defaultValue="daily">
+                <Select value={reportType} onValueChange={(v) => setReportType(v as typeof reportType)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -114,29 +109,33 @@ export default function Reports() {
               </div>
               <div className="space-y-2">
                 <Label>Site</Label>
-                <Select defaultValue="all">
+                <Select value={siteId} onValueChange={setSiteId}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sites</SelectItem>
-                    <SelectItem value="building-a">Building A</SelectItem>
-                    <SelectItem value="building-b">Building B</SelectItem>
-                    <SelectItem value="parking">Parking Lot</SelectItem>
+                    {sites?.map((site) => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Camera</Label>
-                <Select defaultValue="all">
+                <Select value={cameraId} onValueChange={setCameraId}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Cameras</SelectItem>
-                    <SelectItem value="main">Main Entrance</SelectItem>
-                    <SelectItem value="lobby">Lobby Camera 1</SelectItem>
-                    <SelectItem value="conference">Conference Hall</SelectItem>
+                    {cameras?.map((camera) => (
+                      <SelectItem key={camera.id} value={camera.id}>
+                        {camera.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -153,15 +152,19 @@ export default function Reports() {
                     <Calendar
                       mode="single"
                       selected={date}
-                      onSelect={setDate}
+                      onSelect={(d) => d && setDate(d)}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="flex items-end">
-                <Button className="w-full">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Generate Report
+              <div className="flex items-end gap-2">
+                <Button onClick={handleExportCSV} disabled={exportReport.isPending}>
+                  {exportReport.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  )}
+                  Export CSV
                 </Button>
               </div>
             </div>
@@ -169,117 +172,109 @@ export default function Reports() {
         </Card>
 
         {/* Quick Stats Preview */}
-        <div className="mb-6 grid gap-4 md:grid-cols-4">
-          <StatCard
-            title="Total IN (Today)"
-            value="1,284"
-            icon={ArrowUpRight}
-            variant="success"
-          />
-          <StatCard
-            title="Total OUT (Today)"
-            value="1,037"
-            icon={ArrowDownRight}
-            variant="destructive"
-          />
-          <StatCard
-            title="Peak Occupancy"
-            value="312"
-            subtitle="At 14:35"
-            icon={TrendingUp}
-            variant="warning"
-          />
-          <StatCard
-            title="Avg. Dwell Time"
-            value="4m 32s"
-            icon={Clock}
-          />
-        </div>
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : reportData?.stats ? (
+          <>
+            <div className="mb-6 grid gap-4 md:grid-cols-4">
+              <StatCard
+                title="Total IN"
+                value={reportData.stats.totalIn.toLocaleString()}
+                icon={ArrowUpRight}
+                variant="success"
+              />
+              <StatCard
+                title="Total OUT"
+                value={reportData.stats.totalOut.toLocaleString()}
+                icon={ArrowDownRight}
+                variant="destructive"
+              />
+              <StatCard
+                title="Peak Occupancy"
+                value={reportData.stats.peakOccupancy.toString()}
+                subtitle={reportData.stats.peakTime ? `At ${format(new Date(reportData.stats.peakTime), "HH:mm")}` : undefined}
+                icon={TrendingUp}
+                variant="warning"
+              />
+              <StatCard
+                title="Avg. Dwell Time"
+                value={formatDwellTime(reportData.stats.avgDwellSeconds)}
+                icon={Clock}
+              />
+            </div>
 
-        {/* Charts */}
-        <div className="mb-6 grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base">Occupancy Trend</CardTitle>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <OccupancyChart />
-            </CardContent>
-          </Card>
+            {/* Charts */}
+            <div className="mb-6 grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base">Occupancy Trend</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <OccupancyChart data={chartData} />
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base">IN/OUT Distribution</CardTitle>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <InOutChart />
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base">IN/OUT Distribution</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <InOutChart data={chartData} />
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Generated Reports */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Generated Reports</CardTitle>
-            <Badge variant="outline">{mockReports.length} Reports</Badge>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Report Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Date Range</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead className="w-32">Export</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockReports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <span className="font-medium">{report.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{report.type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {report.dateRange}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {report.createdAt}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {report.size}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" title="Export CSV">
-                          <FileSpreadsheet className="h-4 w-4 text-success" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Export PDF">
-                          <File className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+            {/* Data Table */}
+            {reportData.dailyData.length > 0 && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-base">Daily Breakdown</CardTitle>
+                  <Badge variant="outline">{reportData.dailyData.length} Days</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="py-3 text-left font-medium text-muted-foreground">Date</th>
+                          <th className="py-3 text-left font-medium text-muted-foreground">Camera</th>
+                          <th className="py-3 text-right font-medium text-muted-foreground">IN</th>
+                          <th className="py-3 text-right font-medium text-muted-foreground">OUT</th>
+                          <th className="py-3 text-right font-medium text-muted-foreground">Peak</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.dailyData.map((row, idx) => (
+                          <tr key={idx} className="border-b border-border/50">
+                            <td className="py-3">{format(new Date(row.date), "MMM dd, yyyy")}</td>
+                            <td className="py-3 text-muted-foreground">{row.camera || "All"}</td>
+                            <td className="py-3 text-right text-success">{row.totalIn.toLocaleString()}</td>
+                            <td className="py-3 text-right text-destructive">{row.totalOut.toLocaleString()}</td>
+                            <td className="py-3 text-right">{row.peakOccupancy}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        ) : (
+          <EmptyState
+            icon={FileText}
+            title="No Report Data"
+            description="No data available for the selected date range and filters."
+          />
+        )}
       </div>
     </div>
   );

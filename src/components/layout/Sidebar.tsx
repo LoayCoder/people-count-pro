@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Cameras", href: "/cameras", icon: Camera },
@@ -29,6 +34,10 @@ const navigation = [
   { name: "Recorded Analysis", href: "/recorded", icon: FileVideo },
   { name: "Alerts", href: "/alerts", icon: Bell },
   { name: "Reports", href: "/reports", icon: FileText },
+];
+
+const adminNavigation = [
+  { name: "User Management", href: "/users", icon: UserCog },
 ];
 
 const bottomNavigation = [
@@ -41,10 +50,52 @@ const roleColors: Record<string, string> = {
   viewer: "bg-muted text-muted-foreground",
 };
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { profile, role, signOut } = useAuth();
+
+  const handleNavClick = () => {
+    onNavigate?.();
+  };
+
+  const renderNavLink = (item: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }) => {
+    const isActive = location.pathname === item.href;
+    const Icon = item.icon;
+
+    const link = (
+      <NavLink
+        key={item.name}
+        to={item.href}
+        onClick={handleNavClick}
+        className={cn(
+          "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+      >
+        {isActive && (
+          <div className="absolute left-0 h-6 w-1 rounded-r-full bg-primary" />
+        )}
+        <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+        {!collapsed && <span>{item.name}</span>}
+      </NavLink>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip key={item.name} delayDuration={0}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.name}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return link;
+  };
 
   return (
     <aside
@@ -67,80 +118,21 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-3">
-        {navigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          const Icon = item.icon;
-
-          const link = (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-            >
-              {isActive && (
-                <div className="absolute left-0 h-6 w-1 rounded-r-full bg-primary" />
-              )}
-              <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
-              {!collapsed && <span>{item.name}</span>}
-            </NavLink>
-          );
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.name} delayDuration={0}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  {item.name}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-
-          return link;
-        })}
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        {navigation.map(renderNavLink)}
+        
+        {/* Admin-only navigation */}
+        {role === "admin" && (
+          <>
+            <Separator className="my-2" />
+            {adminNavigation.map(renderNavLink)}
+          </>
+        )}
       </nav>
 
       {/* Bottom navigation */}
       <div className="border-t border-sidebar-border p-3">
-        {bottomNavigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          const Icon = item.icon;
-
-          const link = (
-            <NavLink
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
-            </NavLink>
-          );
-
-          if (collapsed) {
-            return (
-              <Tooltip key={item.name} delayDuration={0}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" className="font-medium">
-                  {item.name}
-                </TooltipContent>
-              </Tooltip>
-            );
-          }
-
-          return link;
-        })}
+        {bottomNavigation.map(renderNavLink)}
 
         {/* User profile section */}
         {profile && (
@@ -180,12 +172,12 @@ export function Sidebar() {
           {!collapsed && <span className="ml-2">Sign Out</span>}
         </Button>
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle - hidden on mobile */}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="mt-2 w-full justify-center text-sidebar-foreground"
+          className="mt-2 w-full justify-center text-sidebar-foreground hidden md:flex"
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />

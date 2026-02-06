@@ -19,11 +19,168 @@ import {
   Shield,
   Database,
   Cpu,
-  Mail,
   Save,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSettings } from "@/hooks/use-settings";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
 export default function Settings() {
+  const { user, profile } = useAuth();
+  const { settings, isLoading, updateMultipleSettings } = useSettings();
+
+  // Local form state
+  const [fullName, setFullName] = useState(profile?.full_name || "");
+  const [alertEmail, setAlertEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Settings state
+  const [demoMode, setDemoMode] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [occupancyAlerts, setOccupancyAlerts] = useState(true);
+  const [spikeAlerts, setSpikeAlerts] = useState(true);
+  const [cameraOfflineAlerts, setCameraOfflineAlerts] = useState(true);
+  const [systemAlerts, setSystemAlerts] = useState(true);
+  const [inAppNotifications, setInAppNotifications] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(false);
+  const [detectionModel, setDetectionModel] = useState("yolov8");
+  const [trackingAlgorithm, setTrackingAlgorithm] = useState("bytetrack");
+  const [maxWorkers, setMaxWorkers] = useState("4");
+  const [gpuAcceleration, setGpuAcceleration] = useState("auto");
+  const [countingDataRetention, setCountingDataRetention] = useState("90");
+  const [snapshotRetention, setSnapshotRetention] = useState("7");
+  const [storeCameraSnapshots, setStoreCameraSnapshots] = useState(true);
+  const [storeAlertSnapshots, setStoreAlertSnapshots] = useState(true);
+  const [autoLogout, setAutoLogout] = useState(true);
+
+  // Load settings
+  useEffect(() => {
+    if (settings && !isLoading) {
+      setDemoMode(settings.demo_mode ?? false);
+      setAutoRefresh(settings.auto_refresh ?? true);
+      setOccupancyAlerts(settings.occupancy_alerts ?? true);
+      setSpikeAlerts(settings.spike_alerts ?? true);
+      setCameraOfflineAlerts(settings.camera_offline_alerts ?? true);
+      setSystemAlerts(settings.system_alerts ?? true);
+      setInAppNotifications(settings.in_app_notifications ?? true);
+      setEmailNotifications(settings.email_notifications ?? false);
+      setAlertEmail(settings.alert_email ?? "");
+      setDetectionModel(settings.detection_model ?? "yolov8");
+      setTrackingAlgorithm(settings.tracking_algorithm ?? "bytetrack");
+      setMaxWorkers(String(settings.max_workers ?? 4));
+      setGpuAcceleration(settings.gpu_acceleration ?? "auto");
+      setCountingDataRetention(String(settings.counting_data_retention ?? 90));
+      setSnapshotRetention(String(settings.snapshot_retention ?? 7));
+      setStoreCameraSnapshots(settings.store_camera_snapshots ?? true);
+      setStoreAlertSnapshots(settings.store_alert_snapshots ?? true);
+    }
+  }, [settings, isLoading]);
+
+  useEffect(() => {
+    setFullName(profile?.full_name || "");
+  }, [profile]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      toast.success("Profile updated successfully");
+    } catch (error: unknown) {
+      toast.error(`Failed to update profile: ${(error as Error).message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveNotifications = () => {
+    updateMultipleSettings.mutate({
+      occupancy_alerts: occupancyAlerts,
+      spike_alerts: spikeAlerts,
+      camera_offline_alerts: cameraOfflineAlerts,
+      system_alerts: systemAlerts,
+      in_app_notifications: inAppNotifications,
+      email_notifications: emailNotifications,
+      alert_email: alertEmail,
+    });
+  };
+
+  const handleSaveAI = () => {
+    updateMultipleSettings.mutate({
+      detection_model: detectionModel,
+      tracking_algorithm: trackingAlgorithm,
+      max_workers: parseInt(maxWorkers),
+      gpu_acceleration: gpuAcceleration,
+    });
+  };
+
+  const handleSaveStorage = () => {
+    updateMultipleSettings.mutate({
+      counting_data_retention: parseInt(countingDataRetention),
+      snapshot_retention: parseInt(snapshotRetention),
+      store_camera_snapshots: storeCameraSnapshots,
+      store_alert_snapshots: storeAlertSnapshots,
+    });
+  };
+
+  const handleSaveSystemPrefs = () => {
+    updateMultipleSettings.mutate({
+      demo_mode: demoMode,
+      auto_refresh: autoRefresh,
+    });
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+      toast.success("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: unknown) {
+      toast.error(`Failed to update password: ${(error as Error).message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <Header title="Settings" subtitle="Configure system preferences and integrations" />
+        <div className="p-6">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <Header title="Settings" subtitle="Configure system preferences and integrations" />
@@ -53,28 +210,27 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" defaultValue="Admin User" />
+                    <Input
+                      id="name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue="admin@company.com" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={user?.email || ""}
+                      disabled
+                    />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select defaultValue="utc">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="utc">UTC</SelectItem>
-                        <SelectItem value="est">Eastern Time (EST)</SelectItem>
-                        <SelectItem value="pst">Pacific Time (PST)</SelectItem>
-                        <SelectItem value="gmt">GMT</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button>
-                    <Save className="mr-2 h-4 w-4" />
+                  <Button onClick={handleSaveProfile} disabled={isSaving}>
+                    {isSaving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
                     Save Changes
                   </Button>
                 </CardContent>
@@ -95,7 +251,7 @@ export default function Settings() {
                         Use sample video data for testing
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch checked={demoMode} onCheckedChange={setDemoMode} />
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between">
@@ -105,18 +261,16 @@ export default function Settings() {
                         Refresh live data every 10 seconds
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch checked={autoRefresh} onCheckedChange={setAutoRefresh} />
                   </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Dark Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Use dark theme across the interface
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
+                  <Button onClick={handleSaveSystemPrefs} disabled={updateMultipleSettings.isPending}>
+                    {updateMultipleSettings.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Preferences
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -144,7 +298,7 @@ export default function Settings() {
                           When occupancy exceeds configured limits
                         </p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch checked={occupancyAlerts} onCheckedChange={setOccupancyAlerts} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -153,7 +307,7 @@ export default function Settings() {
                           Sudden increases in people count
                         </p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch checked={spikeAlerts} onCheckedChange={setSpikeAlerts} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -162,7 +316,7 @@ export default function Settings() {
                           When camera connection is lost
                         </p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch checked={cameraOfflineAlerts} onCheckedChange={setCameraOfflineAlerts} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
@@ -171,7 +325,7 @@ export default function Settings() {
                           AI worker and system health issues
                         </p>
                       </div>
-                      <Switch defaultChecked />
+                      <Switch checked={systemAlerts} onCheckedChange={setSystemAlerts} />
                     </div>
                   </div>
                 </div>
@@ -187,7 +341,7 @@ export default function Settings() {
                         Show notifications in the dashboard
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch checked={inAppNotifications} onCheckedChange={setInAppNotifications} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
@@ -196,7 +350,7 @@ export default function Settings() {
                         Send alerts to your email
                       </p>
                     </div>
-                    <Switch />
+                    <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email-alerts">Alert Email Address</Label>
@@ -204,12 +358,18 @@ export default function Settings() {
                       id="email-alerts"
                       type="email"
                       placeholder="alerts@company.com"
+                      value={alertEmail}
+                      onChange={(e) => setAlertEmail(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
+                <Button onClick={handleSaveNotifications} disabled={updateMultipleSettings.isPending}>
+                  {updateMultipleSettings.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save Notification Settings
                 </Button>
               </CardContent>
@@ -231,7 +391,7 @@ export default function Settings() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Detection Model</Label>
-                    <Select defaultValue="yolov8">
+                    <Select value={detectionModel} onValueChange={setDetectionModel}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -244,7 +404,7 @@ export default function Settings() {
                   </div>
                   <div className="space-y-2">
                     <Label>Tracking Algorithm</Label>
-                    <Select defaultValue="bytetrack">
+                    <Select value={trackingAlgorithm} onValueChange={setTrackingAlgorithm}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -264,7 +424,7 @@ export default function Settings() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Max Concurrent Workers</Label>
-                      <Select defaultValue="4">
+                      <Select value={maxWorkers} onValueChange={setMaxWorkers}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -278,7 +438,7 @@ export default function Settings() {
                     </div>
                     <div className="space-y-2">
                       <Label>GPU Acceleration</Label>
-                      <Select defaultValue="auto">
+                      <Select value={gpuAcceleration} onValueChange={setGpuAcceleration}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -292,8 +452,12 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
+                <Button onClick={handleSaveAI} disabled={updateMultipleSettings.isPending}>
+                  {updateMultipleSettings.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save AI Settings
                 </Button>
               </CardContent>
@@ -315,7 +479,7 @@ export default function Settings() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Counting Data Retention</Label>
-                    <Select defaultValue="90">
+                    <Select value={countingDataRetention} onValueChange={setCountingDataRetention}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -330,7 +494,7 @@ export default function Settings() {
                   </div>
                   <div className="space-y-2">
                     <Label>Snapshot Retention</Label>
-                    <Select defaultValue="7">
+                    <Select value={snapshotRetention} onValueChange={setSnapshotRetention}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -351,7 +515,7 @@ export default function Settings() {
                       Capture periodic snapshots from cameras
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={storeCameraSnapshots} onCheckedChange={setStoreCameraSnapshots} />
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -361,11 +525,15 @@ export default function Settings() {
                       Capture frame when alert is triggered
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch checked={storeAlertSnapshots} onCheckedChange={setStoreAlertSnapshots} />
                 </div>
 
-                <Button>
-                  <Save className="mr-2 h-4 w-4" />
+                <Button onClick={handleSaveStorage} disabled={updateMultipleSettings.isPending}>
+                  {updateMultipleSettings.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
                   Save Storage Settings
                 </Button>
               </CardContent>
@@ -389,19 +557,40 @@ export default function Settings() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Current Password</Label>
-                      <Input type="password" />
+                      <Input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                      />
                     </div>
                     <div></div>
                     <div className="space-y-2">
                       <Label>New Password</Label>
-                      <Input type="password" />
+                      <Input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Confirm New Password</Label>
-                      <Input type="password" />
+                      <Input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
                     </div>
                   </div>
-                  <Button variant="outline">Change Password</Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleChangePassword}
+                    disabled={!newPassword || isSaving}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Change Password
+                  </Button>
                 </div>
 
                 <Separator />
@@ -410,21 +599,12 @@ export default function Settings() {
                   <h4 className="font-medium">Session Security</h4>
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Two-Factor Authentication</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Add an extra layer of security
-                      </p>
-                    </div>
-                    <Switch />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
                       <Label>Auto-logout on Inactivity</Label>
                       <p className="text-sm text-muted-foreground">
                         Log out after 30 minutes of inactivity
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch checked={autoLogout} onCheckedChange={setAutoLogout} />
                   </div>
                 </div>
               </CardContent>
