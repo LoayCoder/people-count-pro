@@ -41,6 +41,7 @@ export function VideoLineConfigurator({
   open,
   onOpenChange,
   videoName,
+  videoFile,
   videoUrl,
   existingLines = [],
   onSave,
