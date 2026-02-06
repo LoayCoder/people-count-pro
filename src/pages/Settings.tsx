@@ -62,7 +62,6 @@ export default function Settings() {
   // Load settings
   useEffect(() => {
     if (settings && !isLoading) {
-      setDemoMode(settings.demo_mode ?? false);
       setAutoRefresh(settings.auto_refresh ?? true);
       setOccupancyAlerts(settings.occupancy_alerts ?? true);
       setSpikeAlerts(settings.spike_alerts ?? true);
